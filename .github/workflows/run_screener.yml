@@ -1,0 +1,48 @@
+name: Run Taiwan Stock Screener
+
+on:
+  schedule:
+    # 20:00 Asia/Taipei is 12:00 UTC. Runs every day, including weekends and holidays.
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+jobs:
+  run-screener:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    env:
+      TZ: Asia/Taipei
+      FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: "587"
+      SMTP_USER: ${{ secrets.GMAIL_USER }}
+      SMTP_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
+      EMAIL_FROM: ${{ secrets.GMAIL_USER }}
+      EMAIL_TO: ${{ secrets.GMAIL_USER }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run screener and send email report
+        run: python tw_stock_screener.py
+
+      - name: Upload latest report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: latest-screener-report
+          path: last_report.txt
+          if-no-files-found: ignore
