@@ -2,8 +2,8 @@ name: Run Taiwan Stock Screener
 
 on:
   schedule:
-    # 20:00 Asia/Taipei is 12:00 UTC. Runs every day, including weekends and holidays.
-    - cron: "0 12 * * *"
+    # 20:17 Asia/Taipei is 12:17 UTC. Avoid the top-of-hour GitHub Actions rush.
+    - cron: "17 12 * * *"
   workflow_dispatch:
 
 jobs:
