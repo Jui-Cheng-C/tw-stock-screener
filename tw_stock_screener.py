@@ -498,6 +498,106 @@ def daily_common_gate(daily: pd.DataFrame) -> bool:
     return macd_above_zero_ok(daily)
 
 
+def elite_reclaim_setup(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
+    """Catch early short-MA reclaim setups after a brief bearish washout."""
+    info: dict[str, Any] = {}
+    if len(daily) < 65:
+        return False, info
+    ind = add_indicators(daily)
+    latest = ind.iloc[-1]
+    previous = ind.iloc[-2]
+    required = [
+        "open",
+        "close",
+        "max",
+        "min",
+        "ma5",
+        "ma10",
+        "ma20",
+        "ma60",
+        "Trading_Volume",
+        "dif",
+        "macd",
+        "hist",
+        "kd_k",
+        "kd_d",
+    ]
+    if latest[required].isna().any() or previous[required].isna().any():
+        return False, info
+
+    close = float(latest["close"])
+    open_price = float(latest["open"])
+    low = float(latest["min"])
+    ma5 = float(latest["ma5"])
+    ma10 = float(latest["ma10"])
+    ma20 = float(latest["ma20"])
+    ma60 = float(latest["ma60"])
+    if min(ma5, ma10, ma20, ma60) <= 0:
+        return False, info
+
+    recent = ind.tail(11).iloc[:-1]
+    below_all_short = (
+        (recent["close"].astype(float) < recent[["ma5", "ma10", "ma20"]].astype(float).min(axis=1))
+        | (recent["min"].astype(float) < recent[["ma5", "ma10", "ma20"]].astype(float).min(axis=1))
+    )
+    had_washout = bool(below_all_short.tail(10).any())
+    reclaim_ma5_ma10 = close > ma5 and close > ma10
+    reclaim_ma20 = close > ma20
+    reclaimed_today = close > ma20 and float(previous["close"]) <= float(previous["ma20"])
+    red_or_strong = close > open_price or close >= float(previous["close"]) * 1.015
+
+    vol5 = float(ind.tail(6).iloc[:-1]["Trading_Volume"].mean())
+    vol20 = float(ind.tail(21).iloc[:-1]["Trading_Volume"].mean())
+    today_vol = float(latest["Trading_Volume"])
+    volume_ok = today_vol >= vol5 * 1.15 or today_vol >= vol20 * 1.10
+
+    hist_tail = ind["hist"].tail(4).astype(float).tolist()
+    hist_improving = len(hist_tail) >= 4 and hist_tail[-1] > hist_tail[-2] > hist_tail[-3]
+    hist_cross_red = hist_tail[-2] <= 0 < hist_tail[-1]
+    dif_rising = float(latest["dif"]) > float(previous["dif"])
+    macd_constructive = bool(hist_improving or hist_cross_red or (dif_rising and float(latest["hist"]) > 0))
+
+    kd_k = float(latest["kd_k"])
+    kd_d = float(latest["kd_d"])
+    prev_k = float(previous["kd_k"])
+    prev_d = float(previous["kd_d"])
+    kd_turning = kd_k > kd_d and kd_k > prev_k
+    kd_not_overheated = kd_k <= 85 and kd_d <= 80
+
+    not_extended = (close - ma20) / ma20 <= 0.08
+    price_not_chasing = (close - low) / close <= 0.055
+    trend_floor = ma20 >= ma60 * 0.96
+
+    ok = all(
+        [
+            had_washout,
+            reclaim_ma5_ma10,
+            reclaim_ma20,
+            red_or_strong,
+            volume_ok,
+            macd_constructive,
+            kd_turning,
+            kd_not_overheated,
+            not_extended,
+            price_not_chasing,
+            trend_floor,
+        ]
+    )
+    info = {
+        "had_washout": had_washout,
+        "reclaimed_today": reclaimed_today,
+        "reclaim_ma20": reclaim_ma20,
+        "volume_ratio_5d": round(today_vol / vol5, 2) if vol5 > 0 else 0,
+        "volume_ratio_20d": round(today_vol / vol20, 2) if vol20 > 0 else 0,
+        "hist_improving": hist_improving,
+        "hist_cross_red": hist_cross_red,
+        "kd_k": round(kd_k, 2),
+        "kd_d": round(kd_d, 2),
+        "ma20_distance_pct": round((close - ma20) / ma20 * 100, 2),
+    }
+    return bool(ok), info
+
+
 def price_change_pct(daily: pd.DataFrame) -> float:
     if len(daily) < 2:
         return 0.0
@@ -818,7 +918,20 @@ def score_short_candidate(item: dict[str, Any]) -> dict[str, Any]:
         score += 6
         reasons.append("投信買盤支撐")
 
-    if item.get("support_ok"):
+    if item.get("reclaim_ok"):
+        score += 16
+        reasons.append("跌破均線後重新收復")
+        reclaim_info = item.get("reclaim_info") or {}
+        if reclaim_info.get("reclaimed_today"):
+            score += 6
+            reasons.append("今日剛站回月線")
+        if float(reclaim_info.get("volume_ratio_5d") or 0) >= 1.3:
+            score += 5
+            reasons.append("量能明顯放大")
+        if reclaim_info.get("hist_cross_red"):
+            score += 5
+            reasons.append("MACD綠柱翻紅")
+    elif item.get("support_ok"):
         score += 8
         reasons.append("回檔支撐轉強")
     if item.get("breakout_ok"):
@@ -848,7 +961,26 @@ def score_short_candidate(item: dict[str, Any]) -> dict[str, Any]:
 def build_top_reason(item: dict[str, Any]) -> str:
     reasons = item.get("score_reasons", [])
     warnings = item.get("score_warnings", [])
-    main = "、".join(reasons[:3]) if reasons else "型態符合短線候選條件"
+    priority = [
+        "跌破均線後重新收復",
+        "今日剛站回月線",
+        "MACD綠柱翻紅",
+        "60K剛轉強",
+        "60K位於0軸上",
+        "同時符合多類訊號",
+        "整理後再突破",
+        "停損距離漂亮",
+        "停損可控",
+        "量能明顯放大",
+        "成交金額充足",
+        "法人近期偏買",
+        "投信買盤支撐",
+    ]
+    ordered = sorted(
+        reasons,
+        key=lambda value: priority.index(value) if value in priority else len(priority),
+    )
+    main = "、".join(ordered[:3]) if ordered else "型態符合短線候選條件"
     risk = f"；提醒：{warnings[0]}，避免追價。" if warnings else "；停損線需嚴格執行。"
     return (main + risk)[:80]
 
@@ -1006,7 +1138,9 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         if cfg.only_short_entry:
             return screen_short_entry_only(row, cfg, daily)
 
-        if not daily_common_gate(daily):
+        reclaim_ok, reclaim_info = elite_reclaim_setup(daily)
+        daily_macd_ok = daily_common_gate(daily)
+        if not (daily_macd_ok or reclaim_ok):
             return {}
 
         stop = calculate_stop_loss(daily, cfg)
@@ -1064,6 +1198,9 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
             "gain_3d_pct": gain_3d,
             "ma20_distance_pct": ma20_dist,
             "support_ok": support_ok,
+            "reclaim_ok": reclaim_ok,
+            "reclaim_info": reclaim_info,
+            "daily_macd_ok": daily_macd_ok,
             "kd_pullback_ok": kd_pullback_ok,
             "breakout_ok": breakout_ok,
             "short_entry_ok": short_entry_ok,
@@ -1080,25 +1217,25 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         }
 
         categories: dict[str, dict[str, Any]] = {}
-        if support_ok and kd_pullback_ok:
+        if reclaim_ok or (support_ok and kd_pullback_ok):
             categories["strong_continuation"] = {
                 **base,
-                "category": "強勢續攻股",
-                "subtype": "回檔支撐型",
+                "category": "均線收復轉強股",
+                "subtype": "跌破均線後重新站回5/10/20日線" if reclaim_ok else "回檔支撐型",
             }
-        if breakout_ok:
+        if daily_macd_ok and breakout_ok:
             categories["relay_breakout"] = {
                 **base,
                 "category": "中繼再漲股",
                 "subtype": "平台突破型",
             }
-        if (inst_today_ok or foreign_net > 0 or trust_net > 0) and daily_pct >= 0:
+        if daily_macd_ok and (inst_today_ok or foreign_net > 0 or trust_net > 0) and daily_pct >= 0:
             categories["institutional_watch"] = {
                 **base,
                 "category": "法人資金認養股",
                 "subtype": "觀察追蹤",
             }
-        if short_entry_ok:
+        if daily_macd_ok and short_entry_ok:
             categories["precision_entry"] = {
                 **base,
                 "category": "60K精準進場股",
@@ -1166,7 +1303,7 @@ def screen_short_entry_only(
 
 
 CATEGORY_TITLES = {
-    "strong_continuation": "第一類：強勢續攻股（回檔支撐型）",
+    "strong_continuation": "第一類：均線收復轉強股（空翻多精英型）",
     "relay_breakout": "第二類：中繼再漲股（平台突破型）",
     "institutional_watch": "第三類：法人資金認養股（觀察追蹤）",
     "precision_entry": "第四類：60K精準進場股",
