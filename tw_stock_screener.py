@@ -506,6 +506,8 @@ def elite_reclaim_setup(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
     ind = add_indicators(daily)
     latest = ind.iloc[-1]
     previous = ind.iloc[-2]
+    ma60_5ago = ind.iloc[-6]["ma60"] if len(ind) >= 66 else None
+    close_60ago = ind.iloc[-61]["close"] if len(ind) >= 66 else None
     required = [
         "open",
         "close",
@@ -534,6 +536,11 @@ def elite_reclaim_setup(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
     ma60 = float(latest["ma60"])
     if min(ma5, ma10, ma20, ma60) <= 0:
         return False, info
+    if ma60_5ago is None or pd.isna(ma60_5ago) or close_60ago is None or pd.isna(close_60ago):
+        return False, info
+    ma60_rising = ma60 >= float(ma60_5ago) * 0.997
+    season_deduction_ok = close > float(close_60ago)
+    above_season_line = close > ma60
 
     recent = ind.tail(11).iloc[:-1]
     below_all_short = (
@@ -566,7 +573,7 @@ def elite_reclaim_setup(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
 
     not_extended = (close - ma20) / ma20 <= 0.08
     price_not_chasing = (close - low) / close <= 0.055
-    trend_floor = ma20 >= ma60 * 0.96
+    trend_floor = ma20 >= ma60 * 0.96 and above_season_line and ma60_rising and season_deduction_ok
 
     ok = all(
         [
@@ -594,6 +601,9 @@ def elite_reclaim_setup(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
         "kd_k": round(kd_k, 2),
         "kd_d": round(kd_d, 2),
         "ma20_distance_pct": round((close - ma20) / ma20 * 100, 2),
+        "above_season_line": above_season_line,
+        "ma60_rising": ma60_rising,
+        "season_deduction_ok": season_deduction_ok,
     }
     return bool(ok), info
 
@@ -742,6 +752,7 @@ def breakout_platform_ok(daily: pd.DataFrame) -> bool:
 
     close = float(latest["close"])
     open_price = float(latest["open"])
+    high_price = float(latest["max"])
     above_short_ma = (
         close > float(latest["ma5"])
         and close > float(latest["ma10"])
@@ -750,12 +761,27 @@ def breakout_platform_ok(daily: pd.DataFrame) -> bool:
     red_body = close > open_price and (close - open_price) / open_price >= 0.018
     today_volume = float(latest["Trading_Volume"])
     platform_avg_volume = float(platform["Trading_Volume"].mean())
-    recent_avg_volume = float(ind.tail(5)["Trading_Volume"].mean())
+    recent_avg_volume = float(ind.tail(6).iloc[:-1]["Trading_Volume"].mean())
+    recent20_avg_volume = float(ind.tail(21).iloc[:-1]["Trading_Volume"].mean())
+    previous_volume = float(ind.iloc[-2]["Trading_Volume"])
     prior_volume = ind.iloc[max(0, high_iloc - 10) : high_iloc]["Trading_Volume"]
     prior_avg_volume = float(prior_volume.mean()) if not prior_volume.empty else platform_avg_volume
-    volume_breakout = today_volume > platform_avg_volume * 1.25 or today_volume > recent_avg_volume * 1.25
+    volume_breakout = (
+        today_volume >= previous_volume * 1.5
+        and today_volume > recent_avg_volume
+        and today_volume > recent20_avg_volume
+        and today_volume > platform_avg_volume * 1.25
+    )
     volume_shrank = platform_avg_volume <= prior_avg_volume * 1.1
-    return bool(tight_platform and above_short_ma and (red_body or volume_breakout) and volume_shrank)
+    close_near_high = high_price > 0 and (high_price - close) / high_price <= 0.035
+    return bool(
+        tight_platform
+        and above_short_ma
+        and red_body
+        and volume_breakout
+        and volume_shrank
+        and close_near_high
+    )
 
 
 def institutional_single_day_momentum(stock_id: str, cfg: Config) -> tuple[bool, int, int, int]:
@@ -808,6 +834,7 @@ def institutional_signals(stock_id: str, cfg: Config) -> dict[str, Any]:
             "trust_today_net": 0,
             "inst_today_total_net": 0,
             "inst_today_ok": False,
+            "trust_buy_streak": 0,
         }
     df = df.sort_values("date")
     for col in df.columns:
@@ -831,6 +858,17 @@ def institutional_signals(stock_id: str, cfg: Config) -> dict[str, Any]:
 
     foreign_5d, trust_5d, total_5d = net_values(df.tail(5))
     foreign_today, trust_today, total_today = net_values(df.tail(1))
+    trust_daily = []
+    for _, trust_row in df.tail(5).iterrows():
+        trust_buy = float(trust_row["Investment_Trust_buy"]) if "Investment_Trust_buy" in df.columns else 0.0
+        trust_sell = float(trust_row["Investment_Trust_sell"]) if "Investment_Trust_sell" in df.columns else 0.0
+        trust_daily.append(int(trust_buy - trust_sell))
+    trust_buy_streak = 0
+    for value in reversed(trust_daily):
+        if value > 0:
+            trust_buy_streak += 1
+        else:
+            break
     return {
         "foreign_5d_net": foreign_5d,
         "trust_5d_net": trust_5d,
@@ -839,6 +877,7 @@ def institutional_signals(stock_id: str, cfg: Config) -> dict[str, Any]:
         "trust_today_net": trust_today,
         "inst_today_total_net": total_today,
         "inst_today_ok": foreign_today > 1_500_000 or trust_today > 1_000_000,
+        "trust_buy_streak": trust_buy_streak,
     }
 
 
@@ -888,6 +927,9 @@ def score_short_candidate(item: dict[str, Any]) -> dict[str, Any]:
     if int(item.get("short_entry_priority") or 0) >= 2:
         score += 8
         reasons.append("60K位於0軸上")
+    if item.get("breakout_ok") and item.get("short_entry_ok") and int(item.get("short_entry_priority") or 0) >= 2:
+        score += 25
+        reasons.append("日K突破與60K共振")
 
     risk = item.get("stop_loss_risk_pct")
     if risk is not None:
@@ -914,9 +956,23 @@ def score_short_candidate(item: dict[str, Any]) -> dict[str, Any]:
     if inst_net > 0:
         score += 8
         reasons.append("法人近期偏買")
+    trust_buy_streak = int(item.get("trust_buy_streak") or 0)
+    trust_today_ratio = float(item.get("trust_today_ratio") or 0)
     if int(item.get("trust_5d_net") or 0) > 0:
         score += 6
         reasons.append("投信買盤支撐")
+    if trust_buy_streak >= 3:
+        score += 12
+        reasons.append("投信連買")
+    elif trust_buy_streak >= 2:
+        score += 8
+        reasons.append("投信連買")
+    if trust_today_ratio >= 5:
+        score += 12
+        reasons.append("投信認養比重高")
+    elif trust_today_ratio >= 3:
+        score += 6
+        reasons.append("投信認養比重提高")
 
     if item.get("reclaim_ok"):
         score += 16
@@ -931,6 +987,9 @@ def score_short_candidate(item: dict[str, Any]) -> dict[str, Any]:
         if reclaim_info.get("hist_cross_red"):
             score += 5
             reasons.append("MACD綠柱翻紅")
+        if reclaim_info.get("above_season_line") and reclaim_info.get("ma60_rising"):
+            score += 8
+            reasons.append("站上季線且季線翻揚")
     elif item.get("support_ok"):
         score += 8
         reasons.append("回檔支撐轉強")
@@ -965,10 +1024,15 @@ def build_top_reason(item: dict[str, Any]) -> str:
         "跌破均線後重新收復",
         "今日剛站回月線",
         "MACD綠柱翻紅",
+        "站上季線且季線翻揚",
+        "日K突破與60K共振",
         "60K剛轉強",
         "60K位於0軸上",
         "同時符合多類訊號",
         "整理後再突破",
+        "投信連買",
+        "投信認養比重高",
+        "投信認養比重提高",
         "停損距離漂亮",
         "停損可控",
         "量能明顯放大",
@@ -1168,6 +1232,7 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         today_trust_net = 0
         today_inst_total_net = 0
         inst_today_ok = False
+        trust_buy_streak = 0
         try:
             inst = institutional_signals(stock_id, cfg)
             foreign_net = inst["foreign_5d_net"]
@@ -1177,6 +1242,7 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
             today_trust_net = inst["trust_today_net"]
             today_inst_total_net = inst["inst_today_total_net"]
             inst_today_ok = inst["inst_today_ok"]
+            trust_buy_streak = inst["trust_buy_streak"]
         except Exception as exc:
             print(f"[chip-warn] {stock_id} institutional data unavailable: {exc}", file=sys.stderr)
 
@@ -1185,6 +1251,11 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         daily_pct = price_change_pct(daily)
         gain_3d = recent_gain_pct(daily, 3)
         ma20_dist = ma20_distance_pct(daily)
+        trust_today_ratio = (
+            today_trust_net / float(row["Trading_Volume"]) * 100
+            if float(row["Trading_Volume"]) > 0
+            else 0.0
+        )
 
         base = {
             "stock_id": stock_id,
@@ -1212,6 +1283,8 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
             "foreign_today_net": today_foreign_net,
             "trust_today_net": today_trust_net,
             "inst_today_total_net": today_inst_total_net,
+            "trust_buy_streak": trust_buy_streak,
+            "trust_today_ratio": trust_today_ratio,
             "turnover": float(row["Trading_Volume"]) * stop["last_close"],
             "filter_reasons": filter_reasons,
         }
@@ -1229,7 +1302,11 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
                 "category": "中繼再漲股",
                 "subtype": "平台突破型",
             }
-        if daily_macd_ok and (inst_today_ok or foreign_net > 0 or trust_net > 0) and daily_pct >= 0:
+        if (
+            daily_macd_ok
+            and (inst_today_ok or foreign_net > 0 or trust_net > 0 or trust_buy_streak >= 2)
+            and daily_pct >= 0
+        ):
             categories["institutional_watch"] = {
                 **base,
                 "category": "法人資金認養股",
