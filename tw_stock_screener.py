@@ -21,16 +21,23 @@ import smtplib
 import sys
 import time
 import traceback
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from html import escape
+from pathlib import Path
 from typing import Any
 from urllib import error, parse, request
 
 import pandas as pd
+import requests
 import yfinance as yf
+from bs4 import BeautifulSoup
 
 
 FINMIND_URL = "https://api.finmindtrade.com/api/v4/data"
+TRADE_JOURNAL_PATH = Path("trade_journal.csv")
+REPORT_DIR = Path("reports")
 
 
 def env_str(name: str, default: str = "") -> str:
@@ -1260,6 +1267,7 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         base = {
             "stock_id": stock_id,
             "stock_name": stock_name,
+            "market_type": market_type,
             "last_close": stop["last_close"],
             "stop_loss": stop["stop_loss"],
             "stop_loss_risk_pct": stop["stop_loss_risk_pct"],
@@ -1361,6 +1369,7 @@ def screen_short_entry_only(
     item = {
         "stock_id": stock_id,
         "stock_name": stock_name,
+        "market_type": market_type,
         "last_close": stop["last_close"],
         "stop_loss": stop["stop_loss"],
         "stop_loss_risk_pct": stop["stop_loss_risk_pct"],
@@ -1395,7 +1404,428 @@ LIMITED_CATEGORY_COUNTS = {
 }
 
 
-def format_report(results: dict[str, list[dict[str, Any]]], cfg: Config) -> tuple[str, str]:
+def is_friday(report_date: str) -> bool:
+    try:
+        return dt.date.fromisoformat(report_date).weekday() == 4
+    except ValueError:
+        return False
+
+
+def trade_journal_columns() -> list[str]:
+    return [
+        "選股日期",
+        "排名",
+        "股票代號",
+        "股名",
+        "市場別",
+        "所屬類別",
+        "進場價",
+        "停損價",
+        "短線分數",
+        "操作理由",
+    ]
+
+
+def load_trade_journal() -> pd.DataFrame:
+    if not TRADE_JOURNAL_PATH.exists():
+        return pd.DataFrame(columns=trade_journal_columns())
+    try:
+        return pd.read_csv(TRADE_JOURNAL_PATH, dtype={"股票代號": str})
+    except Exception as exc:
+        print(f"[journal-warn] cannot read {TRADE_JOURNAL_PATH}: {exc}", file=sys.stderr)
+        return pd.DataFrame(columns=trade_journal_columns())
+
+
+def record_top3_journal(shortlist: list[dict[str, Any]], cfg: Config) -> None:
+    report_date = cfg_date(cfg)
+    rows = []
+    for rank, row in enumerate(shortlist[:3], start=1):
+        rows.append(
+            {
+                "選股日期": report_date,
+                "排名": rank,
+                "股票代號": str(row.get("stock_id", "")),
+                "股名": str(row.get("stock_name", "")),
+                "市場別": str(row.get("market_type", "")),
+                "所屬類別": "、".join(row.get("category_names", [row.get("category", "")])),
+                "進場價": format_number(row.get("last_close")),
+                "停損價": format_number(row.get("stop_loss")),
+                "短線分數": format_integer(row.get("short_score")),
+                "操作理由": str(row.get("top_reason", "")),
+            }
+        )
+
+    if not rows:
+        return
+
+    current = load_trade_journal()
+    next_df = pd.DataFrame(rows, columns=trade_journal_columns())
+    if not current.empty:
+        current = current[
+            ~(
+                (current["選股日期"].astype(str) == report_date)
+                & (current["排名"].astype(str).isin(["1", "2", "3"]))
+            )
+        ]
+        next_df = pd.concat([current, next_df], ignore_index=True)
+    next_df.to_csv(TRADE_JOURNAL_PATH, index=False, encoding="utf-8-sig")
+
+
+def weekly_review_dates(report_date: str) -> list[str]:
+    anchor = dt.date.fromisoformat(report_date)
+    this_monday = anchor - dt.timedelta(days=anchor.weekday())
+    dates = [
+        this_monday - dt.timedelta(days=4),  # last Thursday
+        this_monday - dt.timedelta(days=3),  # last Friday
+        this_monday,
+        this_monday + dt.timedelta(days=1),
+        this_monday + dt.timedelta(days=2),
+    ]
+    return [day.isoformat() for day in dates]
+
+
+def history_after_entry(stock_id: str, market_type: str, entry_date: str, end_date: str) -> pd.DataFrame:
+    start = dt.date.fromisoformat(entry_date) + dt.timedelta(days=1)
+    end = dt.date.fromisoformat(end_date) + dt.timedelta(days=1)
+    candidates = [yahoo_symbol(stock_id, market_type), f"{stock_id}.TW", f"{stock_id}.TWO"]
+    for symbol in dict.fromkeys(candidates):
+        try:
+            raw = yf.download(
+                symbol,
+                start=start.isoformat(),
+                end=end.isoformat(),
+                interval="1d",
+                auto_adjust=False,
+                progress=False,
+                threads=False,
+            )
+            hist = normalize_yahoo_history(raw)
+            if not hist.empty:
+                return hist
+        except Exception as exc:
+            print(f"[backtest-warn] {symbol}: {exc}", file=sys.stderr)
+    return pd.DataFrame()
+
+
+def evaluate_trade_path(
+    stock_id: str,
+    market_type: str,
+    entry_date: str,
+    end_date: str,
+    entry_price: float,
+) -> dict[str, Any]:
+    target_price = entry_price * 1.06
+    stop_price = entry_price * 0.97
+    hist = history_after_entry(stock_id, market_type, entry_date, end_date)
+    if hist.empty:
+        return {
+            "status": "資料不足",
+            "max_high": None,
+            "min_low": None,
+            "latest_close": None,
+            "hit_date": "",
+            "return_pct": None,
+        }
+
+    max_high = float(hist["high"].max())
+    min_low = float(hist["low"].min())
+    latest_close = float(hist.iloc[-1]["close"])
+    status = "尚未觸發"
+    hit_date = ""
+    for _, bar in hist.iterrows():
+        high_hit = float(bar["high"]) >= target_price
+        low_hit = float(bar["low"]) <= stop_price
+        bar_date = str(pd.to_datetime(bar["date"]).date())
+        if high_hit and low_hit:
+            status = "同日觸及，需人工判斷"
+            hit_date = bar_date
+            break
+        if high_hit:
+            status = "獲利達標 6%"
+            hit_date = bar_date
+            break
+        if low_hit:
+            status = "觸及停損 3%"
+            hit_date = bar_date
+            break
+
+    return {
+        "status": status,
+        "max_high": max_high,
+        "min_low": min_low,
+        "latest_close": latest_close,
+        "hit_date": hit_date,
+        "return_pct": (latest_close / entry_price - 1) * 100,
+    }
+
+
+def build_weekly_backtest(cfg: Config) -> tuple[str, str]:
+    report_date = cfg_date(cfg)
+    if not is_friday(report_date):
+        return "", ""
+
+    journal = load_trade_journal()
+    title = "本週策略勝率與達標率總體檢報告"
+    if journal.empty:
+        text = f"{title}\n目前尚無足夠 Top 3 選股紀錄可回測。"
+        html = f"<section class='card'><h3>{title}</h3><p>目前尚無足夠 Top 3 選股紀錄可回測。</p></section>"
+        return text, html
+
+    review_dates = set(weekly_review_dates(report_date))
+    pool = journal[journal["選股日期"].astype(str).isin(review_dates)].copy()
+    if pool.empty:
+        text = f"{title}\n本週回看區間尚無紀錄：{', '.join(sorted(review_dates))}"
+        html = (
+            f"<section class='card'><h3>{title}</h3>"
+            f"<p>本週回看區間尚無紀錄：{escape(', '.join(sorted(review_dates)))}</p></section>"
+        )
+        return text, html
+
+    rows = []
+    for _, record in pool.iterrows():
+        try:
+            entry_price = float(record["進場價"])
+            result = evaluate_trade_path(
+                str(record["股票代號"]),
+                str(record.get("市場別", "")),
+                str(record["選股日期"]),
+                report_date,
+                entry_price,
+            )
+            rows.append(
+                {
+                    "選股日期": record["選股日期"],
+                    "排名": record["排名"],
+                    "股票代號": record["股票代號"],
+                    "股名": record["股名"],
+                    "進場價": format_number(entry_price),
+                    "區間最高價": format_number(result["max_high"]),
+                    "區間最低價": format_number(result["min_low"]),
+                    "最新收盤價": format_number(result["latest_close"]),
+                    "狀態": result["status"],
+                    "觸發日期": result["hit_date"],
+                    "目前報酬%": format_number(result["return_pct"]),
+                }
+            )
+        except Exception as exc:
+            rows.append(
+                {
+                    "選股日期": record.get("選股日期", ""),
+                    "排名": record.get("排名", ""),
+                    "股票代號": record.get("股票代號", ""),
+                    "股名": record.get("股名", ""),
+                    "進場價": record.get("進場價", ""),
+                    "區間最高價": "",
+                    "區間最低價": "",
+                    "最新收盤價": "",
+                    "狀態": f"回測失敗：{exc}",
+                    "觸發日期": "",
+                    "目前報酬%": "",
+                }
+            )
+
+    df = pd.DataFrame(rows)
+    total = len(df)
+    wins = int((df["狀態"] == "獲利達標 6%").sum()) if total else 0
+    stops = int((df["狀態"] == "觸及停損 3%").sum()) if total else 0
+    win_rate = wins / total * 100 if total else 0
+    stop_rate = stops / total * 100 if total else 0
+    text = "\n".join(
+        [
+            title,
+            f"回測樣本：{total} 筆，6% 達標：{wins} 筆，3% 停損：{stops} 筆。",
+            f"達標率：{win_rate:.1f}%，停損率：{stop_rate:.1f}%。",
+            dataframe_to_markdown(df),
+        ]
+    )
+    styled = df.copy()
+    styled["狀態"] = styled["狀態"].map(format_backtest_status)
+    html = (
+        f"<section class='card'><h3>{title}</h3>"
+        f"<p>回測樣本：{total} 筆，<span class='hit'>6% 達標：{wins} 筆（{win_rate:.1f}%）</span>，"
+        f"<span class='risk'>3% 停損：{stops} 筆（{stop_rate:.1f}%）</span>。</p>"
+        f"{styled.to_html(index=False, border=0, escape=False, classes='report-table')}</section>"
+    )
+    return text, html
+
+
+def format_backtest_status(value: Any) -> str:
+    text = str(value)
+    if "獲利達標" in text:
+        return f"<span class='hit'>{escape(text)}</span>"
+    if "停損" in text:
+        return f"<span class='risk'>{escape(text)}</span>"
+    return escape(text)
+
+
+def request_html(url: str, *, method: str = "GET", data: dict[str, Any] | None = None) -> str:
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+        ),
+        "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.7",
+    }
+    try:
+        if method.upper() == "POST":
+            resp = requests.post(url, data=data or {}, headers=headers, timeout=15)
+        else:
+            resp = requests.get(url, headers=headers, timeout=15)
+        resp.raise_for_status()
+        resp.encoding = resp.apparent_encoding or "utf-8"
+        return resp.text
+    except Exception as exc:
+        print(f"[event-warn] {url}: {exc}", file=sys.stderr)
+        return ""
+
+
+def fetch_mops_material_events(stock_id: str, report_date: str) -> list[str]:
+    try:
+        day = dt.date.fromisoformat(report_date)
+    except ValueError:
+        day = dt.date.today()
+    roc_year = str(day.year - 1911)
+    payload = {
+        "encodeURIComponent": "1",
+        "step": "1",
+        "firstin": "1",
+        "off": "1",
+        "keyword4": "",
+        "code1": "",
+        "TYPEK2": "",
+        "checkbtn": "",
+        "queryName": "co_id",
+        "inpuType": "co_id",
+        "TYPEK": "all",
+        "co_id": stock_id,
+        "year": roc_year,
+        "month": f"{day.month:02d}",
+        "day": f"{day.day:02d}",
+    }
+    html = request_html("https://mops.twse.com.tw/mops/web/ajax_t05st02", method="POST", data=payload)
+    if not html:
+        return []
+    soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text(" ", strip=True)
+    if any(marker in text for marker in ("查無", "無符合", "No data")):
+        return []
+    rows = []
+    for tr in soup.select("tr"):
+        cells = [cell.get_text(" ", strip=True) for cell in tr.select("td")]
+        joined = " ".join(cells)
+        if stock_id in joined and len(joined) > 20:
+            rows.append(joined[:180])
+    if rows:
+        return rows[:3]
+    if stock_id in text and len(text) > 30:
+        return [text[:180]]
+    return []
+
+
+def fetch_yahoo_event_headlines(stock_id: str, stock_name: str) -> list[str]:
+    html = ""
+    for suffix in ("TW", "TWO"):
+        html = request_html(f"https://tw.stock.yahoo.com/quote/{stock_id}.{suffix}/news")
+        if html:
+            break
+    if not html:
+        query = parse.quote(f"{stock_id} {stock_name} 法說會 除權息 重大訊息")
+        html = request_html(f"https://tw.stock.yahoo.com/search?p={query}")
+    if not html:
+        return []
+    soup = BeautifulSoup(html, "html.parser")
+    headlines: list[str] = []
+    keywords = ("法說", "除權", "除息", "重大訊息", "處置", "注意", "財報", "減資", "庫藏股")
+    for node in soup.find_all(["h3", "a", "span"]):
+        text = node.get_text(" ", strip=True)
+        if len(text) < 8 or len(text) > 90:
+            continue
+        if (stock_id in text or stock_name in text) and any(keyword in text for keyword in keywords):
+            if text not in headlines:
+                headlines.append(text)
+        if len(headlines) >= 3:
+            break
+    return headlines
+
+
+def build_event_alerts(candidates: list[dict[str, Any]], cfg: Config) -> tuple[str, str]:
+    title = "🚨 警示！候選股近期大事"
+    if not candidates:
+        text = f"{title}\n今日無候選股可檢查。"
+        html = f"<section class='card alert-card'><h3>{title}</h3><p>今日無候選股可檢查。</p></section>"
+        return text, html
+
+    rows = []
+    report_date = cfg_date(cfg)
+    checked: set[str] = set()
+    for item in candidates[:12]:
+        stock_id = str(item.get("stock_id", ""))
+        if not stock_id or stock_id in checked:
+            continue
+        checked.add(stock_id)
+        stock_name = str(item.get("stock_name", ""))
+        alerts: list[str] = []
+        alerts.extend(fetch_mops_material_events(stock_id, report_date))
+        if not alerts:
+            alerts.extend(fetch_yahoo_event_headlines(stock_id, stock_name))
+        rows.append(
+            {
+                "股票代號": stock_id,
+                "股名": stock_name,
+                "警示內容": "；".join(alerts) if alerts else "目前未偵測到重大訊息、法說會或除權息關鍵警示",
+            }
+        )
+        time.sleep(0.2)
+
+    df = pd.DataFrame(rows, columns=["股票代號", "股名", "警示內容"])
+    text = f"{title}\n{dataframe_to_markdown(df)}"
+    html_df = df.copy()
+    html_df["警示內容"] = html_df["警示內容"].map(
+        lambda value: (
+            f"<span class='risk'>{escape(str(value))}</span>"
+            if "未偵測" not in str(value)
+            else escape(str(value))
+        )
+    )
+    html = (
+        f"<section class='card alert-card'><h3>{title}</h3>"
+        "<p class='muted'>以公開資訊觀測站重大訊息為主，Yahoo 股市新聞關鍵字為備援；警示僅作為盤前風控提醒。</p>"
+        f"{html_df.to_html(index=False, border=0, escape=False, classes='report-table')}</section>"
+    )
+    return text, html
+
+
+def minimalist_html_start(report_date: str, total: int) -> list[str]:
+    return [
+        "<html><head><meta charset='utf-8'>",
+        "<style>",
+        "body{font-family:'Microsoft JhengHei','Noto Sans TC',Arial,sans-serif;background:#f7f4ef;color:#24302f;margin:0;padding:24px;line-height:1.65;}",
+        ".wrap{max-width:980px;margin:0 auto;}",
+        "h2{font-size:28px;margin:0 0 8px;color:#1d2d2b;}",
+        "h3{font-size:19px;margin:0 0 12px;color:#24302f;}",
+        ".subtitle,.muted{color:#6f7a76;font-size:14px;}",
+        ".card{background:#fffdfa;border:1px solid #eadfce;border-radius:14px;padding:18px 20px;margin:18px 0;box-shadow:0 6px 18px rgba(73,58,38,.06);}",
+        ".alert-card{border-color:#e7b8b2;background:#fff8f6;}",
+        ".report-table{width:100%;border-collapse:collapse;font-size:14px;background:white;}",
+        ".report-table th{background:#efe7da;color:#38433f;text-align:left;padding:10px;border-bottom:1px solid #ddcfbd;}",
+        ".report-table td{padding:10px;border-bottom:1px solid #eee5d9;vertical-align:top;}",
+        ".rank-one{background:#fff2c2;border-radius:999px;padding:2px 8px;font-weight:700;color:#765b00;}",
+        ".hit{color:#b23b3b;font-weight:700;}",
+        ".risk{color:#b72f2f;font-weight:700;}",
+        ".note{background:#eef6f4;border-left:4px solid #7ea89a;padding:10px 12px;border-radius:8px;color:#40504c;}",
+        "</style></head><body><div class='wrap'>",
+        f"<h2>台股短線精選報告 - {report_date}</h2>",
+        f"<p class='subtitle'>本次共篩出 {total} 筆分類結果。若遇休市，資料來源可能回傳最近一個交易日。</p>",
+        "<p class='note'>策略紀律：短線目標以 6% 至 10% 為主，停損防守線需優先於期待報酬。</p>",
+    ]
+
+
+def format_report(
+    results: dict[str, list[dict[str, Any]]],
+    cfg: Config,
+    event_sections: tuple[str, str] | None = None,
+    weekly_sections: tuple[str, str] | None = None,
+) -> tuple[str, str]:
     report_date = cfg_date(cfg)
     subject = f"台股短線精選報告 - {report_date}"
     total = sum(len(items) for items in results.values())
@@ -1403,12 +1833,7 @@ def format_report(results: dict[str, list[dict[str, Any]]], cfg: Config) -> tupl
         f"台股短線精選報告日期：{report_date}，本次共篩出 {total} 筆分類結果。",
         "提醒：若今日為週末、國定假日、颱風休市或市場未交易，資料來源可能回傳最近一個交易日的最新可取得資料。",
     ]
-    html_sections: list[str] = [
-        "<html><body>",
-        f"<h2>台股短線精選報告 - {report_date}</h2>",
-        f"<p>本次共篩出 {total} 筆分類結果。</p>",
-        "<p>提醒：若今日為週末、國定假日、颱風休市或市場未交易，資料來源可能回傳最近一個交易日的最新可取得資料。</p>",
-    ]
+    html_sections: list[str] = minimalist_html_start(report_date, total)
     keys = [key for key in CATEGORY_TITLES if key in results]
     for key in keys:
         title = CATEGORY_TITLES[key]
@@ -1423,7 +1848,22 @@ def format_report(results: dict[str, list[dict[str, Any]]], cfg: Config) -> tupl
     text, html = format_top_reason_section(shortlist[:3])
     text_sections.append(text)
     html_sections.append(html)
-    html_sections.append("</body></html>")
+
+    if event_sections:
+        event_text, event_html = event_sections
+        if event_text:
+            text_sections.append(event_text)
+        if event_html:
+            html_sections.append(event_html)
+
+    if weekly_sections:
+        weekly_text, weekly_html = weekly_sections
+        if weekly_text:
+            text_sections.append(weekly_text)
+        if weekly_html:
+            html_sections.append(weekly_html)
+
+    html_sections.append("</div></body></html>")
     return subject, "\n\n".join(text_sections) + "\n\nHTML_TABLE:\n" + "\n".join(html_sections)
 
 
@@ -1455,14 +1895,14 @@ def format_category_section(title: str, rows: list[dict[str, Any]]) -> tuple[str
     if not rows:
         empty_df = empty_report_dataframe()
         text = f"{title}\n0 項\n{dataframe_to_markdown(empty_df)}"
-        html_table = empty_df.to_html(index=False, border=1, escape=False)
-        html = f"<h3>{title}</h3><p>0 項</p>{html_table}"
+        html_table = empty_df.to_html(index=False, border=0, escape=False, classes="report-table")
+        html = f"<section class='card'><h3>{title}</h3><p>0 項</p>{html_table}</section>"
         return text, html
 
     df = report_display_dataframe(rows)
     text = f"{title}\n{len(rows)} 項\n{dataframe_to_markdown(df)}"
-    html_table = df.to_html(index=False, border=1, escape=False)
-    html = f"<h3>{title}</h3><p>{len(rows)} 項</p>{html_table}"
+    html_table = df.to_html(index=False, border=0, escape=False, classes="report-table")
+    html = f"<section class='card'><h3>{title}</h3><p>{len(rows)} 項</p>{html_table}</section>"
     return text, html
 
 
@@ -1474,11 +1914,15 @@ def format_shortlist_section(rows: list[dict[str, Any]]) -> tuple[str, str]:
             columns=["排名", "股票代號", "股名", "所屬類別", "短線分數"],
         )
         text = f"{title}\n0 項\n{dataframe_to_markdown(empty_df)}"
-        html = f"<h3>{title}</h3><p>0 項</p>{empty_df.to_html(index=False, border=1, escape=False)}"
+        html = f"<section class='card'><h3>{title}</h3><p>0 項</p>{empty_df.to_html(index=False, border=0, escape=False, classes='report-table')}</section>"
         return text, html
     df = shortlist_dataframe(rows)
     text = f"{title}\n{len(rows)} 項\n{dataframe_to_markdown(df)}"
-    html = f"<h3>{title}</h3><p>{len(rows)} 項</p>{df.to_html(index=False, border=1, escape=False)}"
+    html_df = df.copy()
+    if not html_df.empty:
+        html_df["排名"] = html_df["排名"].astype(str)
+        html_df.loc[html_df["排名"].astype(str) == "1", "排名"] = "<span class='rank-one'>1</span>"
+    html = f"<section class='card'><h3>{title}</h3><p>{len(rows)} 項</p>{html_df.to_html(index=False, border=0, escape=False, classes='report-table')}</section>"
     return text, html
 
 
@@ -1502,7 +1946,7 @@ def format_top_reason_section(rows: list[dict[str, Any]]) -> tuple[str, str]:
             columns=["排名", "股票", "操作理由"],
         )
     text = f"{title}\n{dataframe_to_markdown(df)}"
-    html = f"<h3>{title}</h3>{df.to_html(index=False, border=1, escape=False)}"
+    html = f"<section class='card'><h3>{title}</h3>{df.to_html(index=False, border=0, escape=False, classes='report-table')}</section>"
     return text, html
 
 
@@ -1607,17 +2051,43 @@ def send_line_notify_legacy(message: str, cfg: Config) -> None:
         pass
 
 
-def send_email(subject: str, body: str, cfg: Config) -> None:
+def html_from_body(body: str) -> str:
+    _, _, html = body.partition("\n\nHTML_TABLE:\n")
+    return html
+
+
+def save_html_report(subject: str, body: str, cfg: Config) -> Path | None:
+    html = html_from_body(body)
+    if not html:
+        return None
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    safe_date = cfg_date(cfg).replace("/", "-")
+    path = REPORT_DIR / f"screener_report_{safe_date}.html"
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(html)
+    return path
+
+
+def send_email(subject: str, body: str, cfg: Config, attachments: list[Path] | None = None) -> None:
     if not (cfg.smtp_host and cfg.email_from and cfg.email_to):
         return
     plain, _, html = body.partition("\n\nHTML_TABLE:\n")
-    msg = MIMEMultipart("alternative")
+    msg = MIMEMultipart("mixed")
     msg["Subject"] = subject
     msg["From"] = cfg.email_from
     msg["To"] = cfg.email_to
-    msg.attach(MIMEText(plain, "plain", "utf-8"))
+    alternative = MIMEMultipart("alternative")
+    alternative.attach(MIMEText(plain, "plain", "utf-8"))
     if html:
-        msg.attach(MIMEText(html, "html", "utf-8"))
+        alternative.attach(MIMEText(html, "html", "utf-8"))
+    msg.attach(alternative)
+
+    for path in attachments or []:
+        if not path or not path.exists():
+            continue
+        part = MIMEApplication(path.read_bytes(), _subtype="html")
+        part.add_header("Content-Disposition", "attachment", filename=path.name)
+        msg.attach(part)
 
     with smtplib.SMTP(cfg.smtp_host, cfg.smtp_port) as server:
         server.starttls()
@@ -1633,9 +2103,10 @@ def notify(subject: str, body: str, cfg: Config) -> None:
         fh.write("\n\n")
         fh.write(body.split("\n\nHTML_TABLE:\n")[0])
 
+    html_path = save_html_report(subject, body, cfg)
     sent = False
     if cfg.email_from and cfg.email_to and cfg.smtp_host:
-        send_email(subject, body, cfg)
+        send_email(subject, body, cfg, [html_path] if html_path else None)
         sent = True
     if cfg.line_notify_token:
         send_line_notify_legacy(subject + "\n" + body.split("\n\nHTML_TABLE:\n")[0], cfg)
@@ -1758,7 +2229,22 @@ def main() -> int:
 
     try:
         results = run(cfg)
-        subject, body = format_report(results, cfg)
+        record_top3_journal(results.get("shortlist", []), cfg)
+        try:
+            event_sections = build_event_alerts(results.get("shortlist", [])[:3], cfg)
+        except Exception:
+            event_sections = (
+                "🚨 警示！候選股近期大事\n事件警示模組暫時無法完成，請人工留意重大訊息。",
+                "<section class='card alert-card'><h3>🚨 警示！候選股近期大事</h3><p class='risk'>事件警示模組暫時無法完成，請人工留意重大訊息。</p></section>",
+            )
+        try:
+            weekly_sections = build_weekly_backtest(cfg)
+        except Exception as exc:
+            weekly_sections = (
+                f"本週策略勝率與達標率總體檢報告\n週回測模組暫時無法完成：{exc}",
+                f"<section class='card'><h3>本週策略勝率與達標率總體檢報告</h3><p class='risk'>週回測模組暫時無法完成：{escape(str(exc))}</p></section>",
+            )
+        subject, body = format_report(results, cfg, event_sections, weekly_sections)
     except Exception:
         subject, body = format_status_report(traceback.format_exc(), cfg)
 

@@ -6,6 +6,9 @@ on:
     - cron: "17 12 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   run-screener:
     runs-on: ubuntu-latest
@@ -39,10 +42,27 @@ jobs:
       - name: Run screener and send email report
         run: python tw_stock_screener.py
 
+      - name: Persist screener journal
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add trade_journal.csv reports/*.html 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Update screener journal"
+            git pull --rebase
+            git push
+          else
+            echo "No screener journal changes to persist."
+          fi
+
       - name: Upload latest report artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: latest-screener-report
-          path: last_report.txt
+          path: |
+            last_report.txt
+            trade_journal.csv
+            reports/*.html
           if-no-files-found: ignore
