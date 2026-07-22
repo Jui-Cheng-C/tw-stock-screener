@@ -2,8 +2,11 @@ name: Daily Taiwan Stock Screener
 
 on:
   schedule:
-    # 20:17 Asia/Taipei is 12:17 UTC. Avoid the top-of-hour GitHub Actions rush.
+    # 20:17 Asia/Taipei is 12:17 UTC. Extra catch-up slots reduce missed GitHub cron runs.
     - cron: "17 12 * * *"
+    - cron: "47 12 * * *"
+    - cron: "17 13 * * *"
+    - cron: "17 14 * * *"
   workflow_dispatch:
 
 permissions:
@@ -40,14 +43,14 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run screener and send email report
-        run: python tw_stock_screener.py
+        run: python tw_stock_screener.py --skip-if-sent
 
       - name: Persist screener journal
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add trade_journal.csv reports/*.html 2>/dev/null || true
+          git add trade_journal.csv reports/*.html sent_reports/*.txt 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Update screener journal"
             git pull --rebase

@@ -38,6 +38,7 @@ from bs4 import BeautifulSoup
 FINMIND_URL = "https://api.finmindtrade.com/api/v4/data"
 TRADE_JOURNAL_PATH = Path("trade_journal.csv")
 REPORT_DIR = Path("reports")
+SENT_MARKER_DIR = Path("sent_reports")
 
 
 def env_str(name: str, default: str = "") -> str:
@@ -2281,6 +2282,24 @@ def save_html_report(subject: str, body: str, cfg: Config) -> Path | None:
     return path
 
 
+def sent_marker_path(cfg: Config) -> Path:
+    safe_date = cfg_date(cfg).replace("/", "-")
+    return SENT_MARKER_DIR / f"email_sent_{safe_date}.txt"
+
+
+def already_sent_today(cfg: Config) -> bool:
+    return sent_marker_path(cfg).exists()
+
+
+def mark_sent_today(subject: str, cfg: Config) -> None:
+    SENT_MARKER_DIR.mkdir(parents=True, exist_ok=True)
+    with open(sent_marker_path(cfg), "w", encoding="utf-8") as fh:
+        fh.write(subject)
+        fh.write("\n")
+        fh.write(dt.datetime.now().isoformat(timespec="seconds"))
+        fh.write("\n")
+
+
 def send_email(subject: str, body: str, cfg: Config, attachments: list[Path] | None = None) -> None:
     if not (cfg.smtp_host and cfg.email_from and cfg.email_to):
         return
@@ -2418,6 +2437,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-notify", action="store_true", help="Print result only")
     parser.add_argument("--only-short-entry", action="store_true", help="Run only category 4")
     parser.add_argument("--report-date", default=None, help="Use data up to YYYY-MM-DD for review/backtest")
+    parser.add_argument(
+        "--skip-if-sent",
+        action="store_true",
+        help="Skip cloud catch-up runs after today's formal report was already sent",
+    )
     return parser.parse_args()
 
 
@@ -2440,6 +2464,11 @@ def main() -> int:
     if args.report_date:
         cfg = dataclasses.replace(cfg, report_date=args.report_date)
 
+    if args.skip_if_sent and already_sent_today(cfg):
+        print(f"[skip] Formal report already sent for {cfg_date(cfg)}.")
+        return 0
+
+    formal_report_ready = False
     try:
         results = run(cfg)
         record_top3_journal(results.get("shortlist", []), cfg)
@@ -2458,6 +2487,7 @@ def main() -> int:
                 f"<section class='card'><h3>本週策略勝率與達標率總體檢報告</h3><p class='risk'>週回測模組暫時無法完成：{escape(str(exc))}</p></section>",
             )
         subject, body = format_report(results, cfg, event_sections, weekly_sections)
+        formal_report_ready = True
     except Exception:
         subject, body = format_status_report(traceback.format_exc(), cfg)
 
@@ -2466,6 +2496,8 @@ def main() -> int:
         print(body.split("\n\nHTML_TABLE:\n")[0])
     else:
         notify(subject, body, cfg)
+        if formal_report_ready:
+            mark_sent_today(subject, cfg)
     return 0
 
 
