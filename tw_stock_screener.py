@@ -116,6 +116,12 @@ class Config:
     only_short_entry: bool = dataclasses.field(
         default_factory=lambda: env_bool("ONLY_SHORT_ENTRY", False)
     )
+    only_prepare_turn: bool = dataclasses.field(
+        default_factory=lambda: env_bool("ONLY_PREPARE_TURN", False)
+    )
+    prepare_turn_fallback_volume_shares: int = dataclasses.field(
+        default_factory=lambda: env_int("PREPARE_TURN_FALLBACK_VOLUME_SHARES", 800000)
+    )
     report_date: str = dataclasses.field(default_factory=lambda: env_str("REPORT_DATE"))
     min_price: float = dataclasses.field(default_factory=lambda: env_float("MIN_PRICE", 20.0))
     min_turnover: float = dataclasses.field(
@@ -536,6 +542,43 @@ def daily_trend_protection_ok(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]
     return bool(above_all_ma and daily_macd_above_zero), info
 
 
+def daily_prepare_turn_gate_ok(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
+    info: dict[str, Any] = {}
+    if len(daily) < 25:
+        return False, info
+    ind = add_indicators(daily)
+    latest = ind.iloc[-1]
+    previous = ind.iloc[-2]
+    required = ["close", "ma5", "ma10", "ma20", "dif", "macd", "hist"]
+    if latest[required].isna().any() or previous[["close", "ma5", "hist"]].isna().any():
+        return False, info
+
+    close = float(latest["close"])
+    ma5 = float(latest["ma5"])
+    ma10 = float(latest["ma10"])
+    ma20 = float(latest["ma20"])
+    dif = float(latest["dif"])
+    macd = float(latest["macd"])
+    hist = float(latest["hist"])
+    prev_hist = float(previous["hist"])
+    prev_close = float(previous["close"])
+    prev_ma5 = float(previous["ma5"])
+
+    above_ma10_or_20 = close > ma10 or close > ma20
+    reclaimed_ma5_today = close > ma5 and prev_close <= prev_ma5
+    daily_structure_ok = above_ma10_or_20 or reclaimed_ma5_today
+    daily_momentum_ok = dif > macd or hist >= prev_hist or (dif > 0 and macd > 0)
+
+    info.update(
+        {
+            "above_daily_ma10_or_20": above_ma10_or_20,
+            "reclaimed_daily_ma5_today": reclaimed_ma5_today,
+            "daily_prepare_momentum_ok": daily_momentum_ok,
+        }
+    )
+    return bool(daily_structure_ok and daily_momentum_ok), info
+
+
 def weekly_macd_above_zero_from_daily(daily: pd.DataFrame) -> bool:
     weekly = resample_ohlcv(daily, "W-FRI")
     return macd_above_zero_ok(weekly)
@@ -618,9 +661,10 @@ def intraday_prepare_turn_signal(kbar: pd.DataFrame) -> tuple[bool, str, int, di
         }
     )
 
-    core_reclaim = reclaimed_ma5 or (holds_ma5 and above_ma10 and from_ma20_or_ma60_support)
-    momentum_ready = (hist_contracting or hist_turn_red) and dif_turning_up
-    quality_ok = above_ma10 and near_or_above_ma20 and red_body and close_near_high and kd_not_overheated
+    core_reclaim = close > ma5 and (reclaimed_ma5 or holds_ma5)
+    momentum_ready = hist_contracting or hist_turn_red or dif_turning_up or dif_above_macd
+    structure_ok = above_ma10 or near_or_above_ma20 or above_zero
+    quality_ok = structure_ok
     if not (core_reclaim and momentum_ready and quality_ok):
         return False, "", 0, info
 
@@ -628,6 +672,10 @@ def intraday_prepare_turn_signal(kbar: pd.DataFrame) -> tuple[bool, str, int, di
     if above_zero:
         priority += 1
     if dif_above_macd or hist_turn_red:
+        priority += 1
+    if red_body and close_near_high:
+        priority += 1
+    if kd_not_overheated:
         priority += 1
     reason = "60K重新站上SMA5且動能收斂"
     if above_zero:
@@ -1111,6 +1159,16 @@ def score_short_candidate(item: dict[str, Any]) -> dict[str, Any]:
         if prepare_info.get("from_60m_support"):
             score += 5
             reasons.append("60K支撐後收復")
+        daily_prepare_info = item.get("daily_prepare_info") or {}
+        if daily_prepare_info.get("reclaimed_daily_ma5_today"):
+            score += 8
+            reasons.append("日K剛收復5日線")
+        if daily_prepare_info.get("above_daily_ma10_or_20"):
+            score += 8
+            reasons.append("日K站上10/20日線")
+        if daily_prepare_info.get("daily_prepare_momentum_ok"):
+            score += 5
+            reasons.append("日K動能改善")
         if item.get("daily_trend_ok"):
             score += 8
             reasons.append("日K多頭保護")
@@ -1225,6 +1283,9 @@ def build_top_reason(item: dict[str, Any]) -> str:
         "60K預備轉強",
         "60K預備訊號在0軸上",
         "60K支撐後收復",
+        "日K剛收復5日線",
+        "日K站上10/20日線",
+        "日K動能改善",
         "日K多頭保護",
         "60K剛轉強",
         "60K位於0軸上",
@@ -1408,8 +1469,9 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         reclaim_ok, reclaim_info = elite_reclaim_setup(daily)
         daily_macd_ok = daily_common_gate(daily)
         daily_trend_ok, daily_trend_info = daily_trend_protection_ok(daily)
+        daily_prepare_ok, daily_prepare_info = daily_prepare_turn_gate_ok(daily)
         weekly_macd_ok = weekly_macd_above_zero_from_daily(daily)
-        if not (daily_macd_ok or reclaim_ok or daily_trend_ok):
+        if not (daily_macd_ok or reclaim_ok or daily_trend_ok or daily_prepare_ok):
             return {}
 
         stop = calculate_stop_loss(daily, cfg)
@@ -1490,6 +1552,8 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
             "reclaim_info": reclaim_info,
             "daily_trend_ok": daily_trend_ok,
             "daily_trend_info": daily_trend_info,
+            "daily_prepare_ok": daily_prepare_ok,
+            "daily_prepare_info": daily_prepare_info,
             "weekly_macd_ok": weekly_macd_ok,
             "daily_macd_ok": daily_macd_ok,
             "kd_pullback_ok": kd_pullback_ok,
@@ -1528,7 +1592,7 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
                 "category": "中繼再漲股",
                 "subtype": "平台突破型",
             }
-        if daily_trend_ok and prepare_turn_ok:
+        if daily_prepare_ok and prepare_turn_ok:
             categories["prepare_turn"] = {
                 **base,
                 "category": "60K預備轉強股",
@@ -2351,16 +2415,52 @@ def notify(subject: str, body: str, cfg: Config) -> None:
 def run(cfg: Config) -> dict[str, list[dict[str, Any]]]:
     universe = get_universe(cfg)
     print(f"Universe size after volume filter: {len(universe)}")
-    active_keys = ["precision_entry"] if cfg.only_short_entry else list(CATEGORY_TITLES)
+    if cfg.only_short_entry:
+        active_keys = ["precision_entry"]
+    elif cfg.only_prepare_turn:
+        active_keys = ["prepare_turn"]
+    else:
+        active_keys = list(CATEGORY_TITLES)
     results: dict[str, list[dict[str, Any]]] = {key: [] for key in active_keys}
     for i, (_, row) in enumerate(universe.iterrows(), start=1):
         print(f"[{i}/{len(universe)}] screening {row['stock_id']} {row['stock_name']}")
         categorized = screen_stock(row, cfg)
         for key, item in categorized.items():
-            results[key].append(item)
+            if key in results:
+                results[key].append(item)
         if categorized:
             labels = ", ".join(item["category"] for item in categorized.values())
             print(f"  -> matched {row['stock_id']} {row['stock_name']} [{labels}]")
+
+    if (
+        "prepare_turn" in results
+        and not results["prepare_turn"]
+        and cfg.min_volume_shares > cfg.prepare_turn_fallback_volume_shares
+    ):
+        fallback_cfg = dataclasses.replace(
+            cfg,
+            min_volume_shares=cfg.prepare_turn_fallback_volume_shares,
+        )
+        fallback_universe = get_universe(fallback_cfg)
+        seen = {str(row["stock_id"]) for _, row in universe.iterrows()}
+        fallback_universe = fallback_universe[
+            ~fallback_universe["stock_id"].astype(str).isin(seen)
+        ]
+        print(
+            "Prepare-turn empty; fallback volume filter "
+            f"{cfg.prepare_turn_fallback_volume_shares // 1000} lots adds "
+            f"{len(fallback_universe)} stocks."
+        )
+        for i, (_, row) in enumerate(fallback_universe.iterrows(), start=1):
+            print(
+                f"[fallback {i}/{len(fallback_universe)}] screening "
+                f"{row['stock_id']} {row['stock_name']}"
+            )
+            categorized = screen_stock(row, fallback_cfg)
+            if "prepare_turn" in categorized:
+                results["prepare_turn"].append(categorized["prepare_turn"])
+                print(f"  -> matched {row['stock_id']} {row['stock_name']} [60K預備轉強股]")
+
     finalize_results(results)
     return results
 
@@ -2436,6 +2536,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-big-holder", action="store_true", help="Skip big-holder percentage check")
     parser.add_argument("--no-notify", action="store_true", help="Print result only")
     parser.add_argument("--only-short-entry", action="store_true", help="Run only category 4")
+    parser.add_argument("--only-prepare-turn", action="store_true", help="Run only category 3")
     parser.add_argument("--report-date", default=None, help="Use data up to YYYY-MM-DD for review/backtest")
     parser.add_argument(
         "--skip-if-sent",
@@ -2461,6 +2562,8 @@ def main() -> int:
         cfg = dataclasses.replace(cfg, enable_big_holder_check=False)
     if args.only_short_entry:
         cfg = dataclasses.replace(cfg, only_short_entry=True)
+    if args.only_prepare_turn:
+        cfg = dataclasses.replace(cfg, only_prepare_turn=True)
     if args.report_date:
         cfg = dataclasses.replace(cfg, report_date=args.report_date)
 
