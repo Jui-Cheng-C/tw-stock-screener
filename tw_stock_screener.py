@@ -505,6 +505,135 @@ def daily_common_gate(daily: pd.DataFrame) -> bool:
     return macd_above_zero_ok(daily)
 
 
+def daily_trend_protection_ok(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
+    info: dict[str, Any] = {}
+    if len(daily) < 65:
+        return False, info
+    ind = add_indicators(daily)
+    latest = ind.iloc[-1]
+    required = ["close", "ma5", "ma10", "ma20", "ma60", "dif", "macd", "hist"]
+    if latest[required].isna().any():
+        return False, info
+    close = float(latest["close"])
+    ma5 = float(latest["ma5"])
+    ma10 = float(latest["ma10"])
+    ma20 = float(latest["ma20"])
+    ma60 = float(latest["ma60"])
+    dif = float(latest["dif"])
+    macd = float(latest["macd"])
+    hist = float(latest["hist"])
+    above_all_ma = close > ma5 and close > ma10 and close > ma20 and close > ma60
+    daily_macd_above_zero = dif > 0 and macd > 0
+    daily_momentum_ok = hist >= float(ind.iloc[-2]["hist"]) if not pd.isna(ind.iloc[-2]["hist"]) else False
+    info.update(
+        {
+            "above_all_daily_ma": above_all_ma,
+            "daily_macd_above_zero": daily_macd_above_zero,
+            "daily_momentum_ok": daily_momentum_ok,
+        }
+    )
+    return bool(above_all_ma and daily_macd_above_zero), info
+
+
+def weekly_macd_above_zero_from_daily(daily: pd.DataFrame) -> bool:
+    weekly = resample_ohlcv(daily, "W-FRI")
+    return macd_above_zero_ok(weekly)
+
+
+def intraday_prepare_turn_signal(kbar: pd.DataFrame) -> tuple[bool, str, int, dict[str, Any]]:
+    info: dict[str, Any] = {}
+    if kbar.empty:
+        return False, "", 0, info
+    df = kbar.copy()
+    df["date"] = pd.to_datetime(df["date"])
+    for col in ("open", "max", "min", "close", "Trading_Volume"):
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    hourly = (
+        df.set_index("date")
+        .sort_index()
+        .resample("60min")
+        .agg(
+            {
+                "open": "first",
+                "max": "max",
+                "min": "min",
+                "close": "last",
+                "Trading_Volume": "sum",
+            }
+        )
+        .dropna(subset=["close"])
+        .reset_index()
+    )
+    if len(hourly) < 65:
+        return False, "", 0, info
+    ind = add_indicators(hourly)
+    tail = ind.tail(5)
+    required = ["close", "open", "max", "ma5", "ma10", "ma20", "ma60", "dif", "macd", "hist", "kd_k", "kd_d"]
+    if tail[required].isna().any().any():
+        return False, "", 0, info
+
+    latest = tail.iloc[-1]
+    previous = tail.iloc[-2]
+    close = float(latest["close"])
+    open_price = float(latest["open"])
+    high = float(latest["max"])
+    ma5 = float(latest["ma5"])
+    ma10 = float(latest["ma10"])
+    ma20 = float(latest["ma20"])
+    ma60 = float(latest["ma60"])
+    dif = tail["dif"].astype(float).tolist()
+    macd = tail["macd"].astype(float).tolist()
+    hist = tail["hist"].astype(float).tolist()
+
+    reclaimed_ma5 = close > ma5 and float(previous["close"]) <= float(previous["ma5"])
+    holds_ma5 = close > ma5 and float(previous["close"]) > float(previous["ma5"]) and close >= float(previous["close"])
+    above_ma10 = close > ma10
+    near_or_above_ma20 = close >= ma20 * 0.995
+    from_ma20_or_ma60_support = float(tail["min"].tail(3).min()) <= max(ma20, ma60) * 1.015
+    hist_contracting = hist[-4] < hist[-3] < hist[-2] < hist[-1] and hist[-1] <= 0
+    hist_turn_red = hist[-2] <= 0 < hist[-1]
+    dif_turning_up = dif[-1] > dif[-2] > dif[-3]
+    dif_above_macd = dif[-1] > macd[-1]
+    above_zero = dif[-1] > 0 and macd[-1] > 0
+    red_body = close > open_price
+    close_near_high = high > 0 and (high - close) / high <= 0.025
+    kd_not_overheated = float(latest["kd_k"]) < 85 or float(latest["kd_d"]) < 85
+
+    info.update(
+        {
+            "reclaimed_60m_ma5": reclaimed_ma5,
+            "holds_60m_ma5": holds_ma5,
+            "above_60m_ma10": above_ma10,
+            "near_or_above_60m_ma20": near_or_above_ma20,
+            "from_60m_support": from_ma20_or_ma60_support,
+            "hist_contracting": hist_contracting,
+            "hist_turn_red": hist_turn_red,
+            "dif_turning_up": dif_turning_up,
+            "dif_above_macd": dif_above_macd,
+            "above_60m_zero": above_zero,
+            "red_body": red_body,
+            "close_near_high": close_near_high,
+            "kd_not_overheated": kd_not_overheated,
+        }
+    )
+
+    core_reclaim = reclaimed_ma5 or (holds_ma5 and above_ma10 and from_ma20_or_ma60_support)
+    momentum_ready = (hist_contracting or hist_turn_red) and dif_turning_up
+    quality_ok = above_ma10 and near_or_above_ma20 and red_body and close_near_high and kd_not_overheated
+    if not (core_reclaim and momentum_ready and quality_ok):
+        return False, "", 0, info
+
+    priority = 1
+    if above_zero:
+        priority += 1
+    if dif_above_macd or hist_turn_red:
+        priority += 1
+    reason = "60K重新站上SMA5且動能收斂"
+    if above_zero:
+        reason = "60K零軸上預備轉強"
+    return True, reason, priority, info
+
+
 def elite_reclaim_setup(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
     """Catch early short-MA reclaim setups after a brief bearish washout."""
     info: dict[str, Any] = {}
@@ -842,6 +971,8 @@ def institutional_signals(stock_id: str, cfg: Config) -> dict[str, Any]:
             "inst_today_total_net": 0,
             "inst_today_ok": False,
             "trust_buy_streak": 0,
+            "foreign_buy_streak": 0,
+            "total_inst_buy_streak": 0,
         }
     df = df.sort_values("date")
     for col in df.columns:
@@ -866,16 +997,49 @@ def institutional_signals(stock_id: str, cfg: Config) -> dict[str, Any]:
     foreign_5d, trust_5d, total_5d = net_values(df.tail(5))
     foreign_today, trust_today, total_today = net_values(df.tail(1))
     trust_daily = []
+    foreign_daily = []
+    total_daily = []
     for _, trust_row in df.tail(5).iterrows():
         trust_buy = float(trust_row["Investment_Trust_buy"]) if "Investment_Trust_buy" in df.columns else 0.0
         trust_sell = float(trust_row["Investment_Trust_sell"]) if "Investment_Trust_sell" in df.columns else 0.0
+        foreign_buy = (
+            (float(trust_row["Foreign_Investor_buy"]) if "Foreign_Investor_buy" in df.columns else 0.0)
+            + (
+                float(trust_row["Foreign_Dealer_Self_buy"])
+                if "Foreign_Dealer_Self_buy" in df.columns
+                else 0.0
+            )
+        )
+        foreign_sell = (
+            (float(trust_row["Foreign_Investor_sell"]) if "Foreign_Investor_sell" in df.columns else 0.0)
+            + (
+                float(trust_row["Foreign_Dealer_Self_sell"])
+                if "Foreign_Dealer_Self_sell" in df.columns
+                else 0.0
+            )
+        )
+        row_buy_total = sum(
+            float(trust_row[col]) for col in df.columns if col.endswith("_buy")
+        )
+        row_sell_total = sum(
+            float(trust_row[col]) for col in df.columns if col.endswith("_sell")
+        )
         trust_daily.append(int(trust_buy - trust_sell))
-    trust_buy_streak = 0
-    for value in reversed(trust_daily):
-        if value > 0:
-            trust_buy_streak += 1
-        else:
-            break
+        foreign_daily.append(int(foreign_buy - foreign_sell))
+        total_daily.append(int(row_buy_total - row_sell_total))
+
+    def consecutive_positive(values: list[int]) -> int:
+        streak = 0
+        for value in reversed(values):
+            if value > 0:
+                streak += 1
+            else:
+                break
+        return streak
+
+    trust_buy_streak = consecutive_positive(trust_daily)
+    foreign_buy_streak = consecutive_positive(foreign_daily)
+    total_inst_buy_streak = consecutive_positive(total_daily)
     return {
         "foreign_5d_net": foreign_5d,
         "trust_5d_net": trust_5d,
@@ -885,6 +1049,8 @@ def institutional_signals(stock_id: str, cfg: Config) -> dict[str, Any]:
         "inst_today_total_net": total_today,
         "inst_today_ok": foreign_today > 1_500_000 or trust_today > 1_000_000,
         "trust_buy_streak": trust_buy_streak,
+        "foreign_buy_streak": foreign_buy_streak,
+        "total_inst_buy_streak": total_inst_buy_streak,
     }
 
 
@@ -934,6 +1100,22 @@ def score_short_candidate(item: dict[str, Any]) -> dict[str, Any]:
     if int(item.get("short_entry_priority") or 0) >= 2:
         score += 8
         reasons.append("60K位於0軸上")
+    if item.get("prepare_turn_ok"):
+        score += 14
+        reasons.append("60K預備轉強")
+        prepare_info = item.get("prepare_turn_info") or {}
+        if int(item.get("prepare_turn_priority") or 0) >= 2 or prepare_info.get("above_60m_zero"):
+            score += 8
+            reasons.append("60K預備訊號在0軸上")
+        if prepare_info.get("from_60m_support"):
+            score += 5
+            reasons.append("60K支撐後收復")
+        if item.get("daily_trend_ok"):
+            score += 8
+            reasons.append("日K多頭保護")
+        if item.get("weekly_macd_ok"):
+            score += 5
+            reasons.append("周K在0軸上")
     if item.get("breakout_ok") and item.get("short_entry_ok") and int(item.get("short_entry_priority") or 0) >= 2:
         score += 25
         reasons.append("日K突破與60K共振")
@@ -974,6 +1156,12 @@ def score_short_candidate(item: dict[str, Any]) -> dict[str, Any]:
     elif trust_buy_streak >= 2:
         score += 8
         reasons.append("投信連買")
+    if int(item.get("foreign_buy_streak") or 0) >= 3:
+        score += 4
+        reasons.append("外資連買")
+    if int(item.get("total_inst_buy_streak") or 0) >= 3:
+        score += 6
+        reasons.append("三大法人連買")
     if trust_today_ratio >= 5:
         score += 12
         reasons.append("投信認養比重高")
@@ -1033,8 +1221,13 @@ def build_top_reason(item: dict[str, Any]) -> str:
         "MACD綠柱翻紅",
         "站上季線且季線翻揚",
         "日K突破與60K共振",
+        "60K預備轉強",
+        "60K預備訊號在0軸上",
+        "60K支撐後收復",
+        "日K多頭保護",
         "60K剛轉強",
         "60K位於0軸上",
+        "周K在0軸上",
         "同時符合多類訊號",
         "整理後再突破",
         "投信連買",
@@ -1046,6 +1239,8 @@ def build_top_reason(item: dict[str, Any]) -> str:
         "成交金額充足",
         "法人近期偏買",
         "投信買盤支撐",
+        "三大法人連買",
+        "外資連買",
     ]
     ordered = sorted(
         reasons,
@@ -1211,7 +1406,9 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
 
         reclaim_ok, reclaim_info = elite_reclaim_setup(daily)
         daily_macd_ok = daily_common_gate(daily)
-        if not (daily_macd_ok or reclaim_ok):
+        daily_trend_ok, daily_trend_info = daily_trend_protection_ok(daily)
+        weekly_macd_ok = weekly_macd_above_zero_from_daily(daily)
+        if not (daily_macd_ok or reclaim_ok or daily_trend_ok):
             return {}
 
         stop = calculate_stop_loss(daily, cfg)
@@ -1225,11 +1422,18 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         short_entry_ok = False
         short_entry_reason = ""
         short_entry_priority = 0
+        prepare_turn_ok = False
+        prepare_turn_reason = ""
+        prepare_turn_priority = 0
+        prepare_turn_info: dict[str, Any] = {}
         if cfg.enable_intraday_check:
             intraday = get_yahoo_intraday(stock_id, market_type, cfg)
             kd_pullback_ok = intraday_kd_low_golden_cross(intraday)
             short_entry_ok, short_entry_reason, short_entry_priority = intraday_short_entry_signal(
                 intraday
+            )
+            prepare_turn_ok, prepare_turn_reason, prepare_turn_priority, prepare_turn_info = (
+                intraday_prepare_turn_signal(intraday)
             )
 
         foreign_net = 0
@@ -1240,6 +1444,8 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         today_inst_total_net = 0
         inst_today_ok = False
         trust_buy_streak = 0
+        foreign_buy_streak = 0
+        total_inst_buy_streak = 0
         try:
             inst = institutional_signals(stock_id, cfg)
             foreign_net = inst["foreign_5d_net"]
@@ -1250,6 +1456,8 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
             today_inst_total_net = inst["inst_today_total_net"]
             inst_today_ok = inst["inst_today_ok"]
             trust_buy_streak = inst["trust_buy_streak"]
+            foreign_buy_streak = inst.get("foreign_buy_streak", 0)
+            total_inst_buy_streak = inst.get("total_inst_buy_streak", 0)
         except Exception as exc:
             print(f"[chip-warn] {stock_id} institutional data unavailable: {exc}", file=sys.stderr)
 
@@ -1279,9 +1487,16 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
             "support_ok": support_ok,
             "reclaim_ok": reclaim_ok,
             "reclaim_info": reclaim_info,
+            "daily_trend_ok": daily_trend_ok,
+            "daily_trend_info": daily_trend_info,
+            "weekly_macd_ok": weekly_macd_ok,
             "daily_macd_ok": daily_macd_ok,
             "kd_pullback_ok": kd_pullback_ok,
             "breakout_ok": breakout_ok,
+            "prepare_turn_ok": prepare_turn_ok,
+            "prepare_turn_reason": prepare_turn_reason,
+            "prepare_turn_priority": prepare_turn_priority,
+            "prepare_turn_info": prepare_turn_info,
             "short_entry_ok": short_entry_ok,
             "short_entry_reason": short_entry_reason,
             "short_entry_priority": short_entry_priority,
@@ -1292,6 +1507,8 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
             "trust_today_net": today_trust_net,
             "inst_today_total_net": today_inst_total_net,
             "trust_buy_streak": trust_buy_streak,
+            "foreign_buy_streak": foreign_buy_streak,
+            "total_inst_buy_streak": total_inst_buy_streak,
             "trust_today_ratio": trust_today_ratio,
             "turnover": float(row["Trading_Volume"]) * stop["last_close"],
             "filter_reasons": filter_reasons,
@@ -1310,15 +1527,11 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
                 "category": "中繼再漲股",
                 "subtype": "平台突破型",
             }
-        if (
-            daily_macd_ok
-            and (inst_today_ok or foreign_net > 0 or trust_net > 0 or trust_buy_streak >= 2)
-            and daily_pct >= 0
-        ):
-            categories["institutional_watch"] = {
+        if daily_trend_ok and prepare_turn_ok:
+            categories["prepare_turn"] = {
                 **base,
-                "category": "法人資金認養股",
-                "subtype": "觀察追蹤",
+                "category": "60K預備轉強股",
+                "subtype": prepare_turn_reason,
             }
         if daily_macd_ok and short_entry_ok:
             categories["precision_entry"] = {
@@ -1391,14 +1604,14 @@ def screen_short_entry_only(
 CATEGORY_TITLES = {
     "strong_continuation": "第一類：均線收復轉強股（空翻多精英型）",
     "relay_breakout": "第二類：中繼再漲股（平台突破型）",
-    "institutional_watch": "第三類：法人資金認養股（觀察追蹤）",
+    "prepare_turn": "第三類：60K預備轉強股（提前雷達型）",
     "precision_entry": "第四類：60K精準進場股",
 }
 
 LIMITED_CATEGORY_COUNTS = {
     "strong_continuation": 3,
     "relay_breakout": 3,
-    "institutional_watch": 3,
+    "prepare_turn": 3,
     "precision_entry": 3,
     "shortlist": 9,
 }
@@ -2169,7 +2382,7 @@ def finalize_results(results: dict[str, list[dict[str, Any]]]) -> None:
             results[key] = rows[:limit]
 
     shortlist_pool: dict[str, dict[str, Any]] = {}
-    for key in ("strong_continuation", "relay_breakout", "precision_entry"):
+    for key in ("strong_continuation", "relay_breakout", "prepare_turn", "precision_entry"):
         for item in results.get(key, []):
             stock_id = str(item.get("stock_id"))
             existing = shortlist_pool.get(stock_id)

@@ -1,4 +1,4 @@
-name: Run Taiwan Stock Screener
+name: Daily Taiwan Stock Screener
 
 on:
   schedule:
