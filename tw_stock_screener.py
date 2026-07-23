@@ -124,8 +124,15 @@ class Config:
     )
     report_date: str = dataclasses.field(default_factory=lambda: env_str("REPORT_DATE"))
     min_price: float = dataclasses.field(default_factory=lambda: env_float("MIN_PRICE", 20.0))
+    max_price: float = dataclasses.field(default_factory=lambda: env_float("MAX_PRICE", 700.0))
     min_turnover: float = dataclasses.field(
         default_factory=lambda: env_float("MIN_TURNOVER", 100_000_000.0)
+    )
+    daytrade_min_volume_shares: int = dataclasses.field(
+        default_factory=lambda: env_int("DAYTRADE_MIN_VOLUME_SHARES", 800000)
+    )
+    daytrade_min_turnover: float = dataclasses.field(
+        default_factory=lambda: env_float("DAYTRADE_MIN_TURNOVER", 50_000_000.0)
     )
     max_daily_gain_pct: float = dataclasses.field(
         default_factory=lambda: env_float("MAX_DAILY_GAIN_PCT", 8.0)
@@ -679,8 +686,115 @@ def intraday_prepare_turn_signal(kbar: pd.DataFrame) -> tuple[bool, str, int, di
         priority += 1
     reason = "60K重新站上SMA5且動能收斂"
     if above_zero:
-        reason = "60K零軸上預備轉強"
+        reason = "60K零軸上起漲雷達"
     return True, reason, priority, info
+
+
+def intraday_extreme_daytrade_signal(kbar: pd.DataFrame) -> tuple[bool, str, int, dict[str, Any]]:
+    info: dict[str, Any] = {}
+    if kbar.empty:
+        return False, "", 0, info
+    df = kbar.copy()
+    df["date"] = pd.to_datetime(df["date"])
+    for col in ("open", "max", "min", "close", "Trading_Volume"):
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    hourly = (
+        df.set_index("date")
+        .sort_index()
+        .resample("60min")
+        .agg(
+            {
+                "open": "first",
+                "max": "max",
+                "min": "min",
+                "close": "last",
+                "Trading_Volume": "sum",
+            }
+        )
+        .dropna(subset=["close"])
+        .reset_index()
+    )
+    if len(hourly) < 35:
+        return False, "", 0, info
+    ind = add_indicators(hourly)
+    tail = ind.tail(20)
+    latest3 = ind.tail(3)
+    required = ["open", "close", "ma5", "ma10", "ma20", "dif", "macd", "hist", "Trading_Volume"]
+    if tail[required].isna().any().any() or latest3[required].isna().any().any():
+        return False, "", 0, info
+
+    correction_window = tail.iloc[:-3]
+    below_ma5_ratio = float(
+        (correction_window["close"].astype(float) < correction_window["ma5"].astype(float)).mean()
+    )
+    latest3_above_ma5_ma10 = bool(
+        (
+            (latest3["close"].astype(float) > latest3["ma5"].astype(float))
+            & (latest3["close"].astype(float) > latest3["ma10"].astype(float))
+        ).all()
+    )
+
+    hist = tail["hist"].astype(float).tolist()
+    dif = tail["dif"].astype(float).tolist()
+    macd = tail["macd"].astype(float).tolist()
+    hist_contracting = hist[-3] < hist[-2] < hist[-1] and hist[-1] <= 0
+    hist_turn_red = hist[-2] <= 0 < hist[-1]
+    dif_toward_zero = dif[-1] > dif[-2] > dif[-3] or abs(dif[-1]) < abs(dif[-3])
+    macd_toward_zero = macd[-1] > macd[-2] or abs(macd[-1]) < abs(macd[-3])
+    momentum_ready = hist_contracting or hist_turn_red or (dif_toward_zero and macd_toward_zero)
+
+    latest = tail.iloc[-1]
+    previous = tail.iloc[-2]
+    close = float(latest["close"])
+    open_price = float(latest["open"])
+    ma20 = float(latest["ma20"])
+    red_body = close > open_price
+    hourly_volume_accel = float(latest["Trading_Volume"]) >= float(previous["Trading_Volume"]) * 0.9
+    above_ma20 = close > ma20
+
+    info.update(
+        {
+            "below_60m_ma5_ratio": round(below_ma5_ratio, 2),
+            "latest3_above_60m_ma5_ma10": latest3_above_ma5_ma10,
+            "hist_contracting": hist_contracting,
+            "hist_turn_red": hist_turn_red,
+            "dif_toward_zero": dif_toward_zero,
+            "macd_toward_zero": macd_toward_zero,
+            "red_body": red_body,
+            "hourly_volume_accel": hourly_volume_accel,
+            "above_60m_ma20": above_ma20,
+        }
+    )
+
+    if not (below_ma5_ratio >= 0.55 and latest3_above_ma5_ma10 and momentum_ready):
+        return False, "", 0, info
+
+    priority = 1
+    if hist_turn_red:
+        priority += 2
+    if hist_contracting:
+        priority += 1
+    if above_ma20:
+        priority += 1
+    if red_body:
+        priority += 1
+    if hourly_volume_accel:
+        priority += 1
+    return True, "60K連續修正後強勢收復", priority, info
+
+
+def daytrade_filter_ok(row: pd.Series, cfg: Config, stop: dict[str, Any]) -> tuple[bool, list[str]]:
+    reasons: list[str] = []
+    last_close = float(stop["last_close"])
+    volume = float(row["Trading_Volume"])
+    turnover = volume * last_close
+    if last_close > cfg.max_price:
+        reasons.append("股價超過700元")
+    if volume < cfg.daytrade_min_volume_shares:
+        reasons.append("當沖成交量不足")
+    if turnover < cfg.daytrade_min_turnover:
+        reasons.append("當沖成交金額不足")
+    return not reasons, reasons
 
 
 def elite_reclaim_setup(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
@@ -838,8 +952,10 @@ def common_trade_filter_ok(
     ma20_distance = ma20_distance_pct(daily)
     stop_risk = stop.get("stop_loss_risk_pct")
 
-    if last_close < cfg.min_price:
-        reasons.append("股價過低")
+    if last_close > cfg.max_price:
+        reasons.append("股價超過700元")
+    if float(row["Trading_Volume"]) < cfg.min_volume_shares:
+        reasons.append("成交量低於1000張")
     if turnover < cfg.min_turnover:
         reasons.append("成交金額不足")
     if daily_gain > cfg.max_daily_gain_pct:
@@ -1151,11 +1267,11 @@ def score_short_candidate(item: dict[str, Any]) -> dict[str, Any]:
         reasons.append("60K位於0軸上")
     if item.get("prepare_turn_ok"):
         score += 14
-        reasons.append("60K預備轉強")
+        reasons.append("60K起漲雷達")
         prepare_info = item.get("prepare_turn_info") or {}
         if int(item.get("prepare_turn_priority") or 0) >= 2 or prepare_info.get("above_60m_zero"):
             score += 8
-            reasons.append("60K預備訊號在0軸上")
+            reasons.append("60K雷達訊號在0軸上")
         if prepare_info.get("from_60m_support"):
             score += 5
             reasons.append("60K支撐後收復")
@@ -1199,6 +1315,11 @@ def score_short_candidate(item: dict[str, Any]) -> dict[str, Any]:
     elif turnover < 100_000_000:
         score -= 15
         warnings.append("成交金額不足")
+
+    last_close = float(item.get("last_close") or 0)
+    if 0 < last_close < 20:
+        score -= 4
+        warnings.append("低價股波動較高")
 
     inst_net = int(item.get("inst_5d_total_net") or 0)
     if inst_net > 0:
@@ -1280,8 +1401,8 @@ def build_top_reason(item: dict[str, Any]) -> str:
         "MACD綠柱翻紅",
         "站上季線且季線翻揚",
         "日K突破與60K共振",
-        "60K預備轉強",
-        "60K預備訊號在0軸上",
+        "60K起漲雷達",
+        "60K雷達訊號在0軸上",
         "60K支撐後收復",
         "日K剛收復5日線",
         "日K站上10/20日線",
@@ -1435,7 +1556,8 @@ def build_universe_by_yahoo_volume(info: pd.DataFrame, cfg: Config) -> pd.DataFr
                     continue
                 latest = hist.iloc[-1]
                 volume = float(latest["Volume"])
-                if volume < cfg.min_volume_shares:
+                volume_floor = min(cfg.min_volume_shares, cfg.daytrade_min_volume_shares)
+                if volume < volume_floor:
                     continue
                 source = lookup[symbol]
                 rows.append(
@@ -1471,15 +1593,11 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         daily_trend_ok, daily_trend_info = daily_trend_protection_ok(daily)
         daily_prepare_ok, daily_prepare_info = daily_prepare_turn_gate_ok(daily)
         weekly_macd_ok = weekly_macd_above_zero_from_daily(daily)
-        if not (daily_macd_ok or reclaim_ok or daily_trend_ok or daily_prepare_ok):
-            return {}
 
         stop = calculate_stop_loss(daily, cfg)
         if stop["stop_loss"] is None:
             return {}
         filter_ok, filter_reasons = common_trade_filter_ok(daily, cfg, row, stop)
-        if not filter_ok:
-            return {}
 
         kd_pullback_ok = False
         short_entry_ok = False
@@ -1489,6 +1607,10 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         prepare_turn_reason = ""
         prepare_turn_priority = 0
         prepare_turn_info: dict[str, Any] = {}
+        extreme_daytrade_ok = False
+        extreme_daytrade_reason = ""
+        extreme_daytrade_priority = 0
+        extreme_daytrade_info: dict[str, Any] = {}
         if cfg.enable_intraday_check:
             intraday = get_yahoo_intraday(stock_id, market_type, cfg)
             kd_pullback_ok = intraday_kd_low_golden_cross(intraday)
@@ -1498,6 +1620,17 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
             prepare_turn_ok, prepare_turn_reason, prepare_turn_priority, prepare_turn_info = (
                 intraday_prepare_turn_signal(intraday)
             )
+            (
+                extreme_daytrade_ok,
+                extreme_daytrade_reason,
+                extreme_daytrade_priority,
+                extreme_daytrade_info,
+            ) = intraday_extreme_daytrade_signal(intraday)
+
+        daytrade_ok, daytrade_reasons = daytrade_filter_ok(row, cfg, stop)
+        normal_signal_possible = daily_macd_ok or reclaim_ok or daily_trend_ok or daily_prepare_ok
+        if not ((normal_signal_possible and filter_ok) or (extreme_daytrade_ok and daytrade_ok)):
+            return {}
 
         foreign_net = 0
         trust_net = 0
@@ -1577,32 +1710,43 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
             "trust_today_ratio": trust_today_ratio,
             "turnover": float(row["Trading_Volume"]) * stop["last_close"],
             "filter_reasons": filter_reasons,
+            "extreme_daytrade_ok": extreme_daytrade_ok,
+            "extreme_daytrade_reason": extreme_daytrade_reason,
+            "extreme_daytrade_priority": extreme_daytrade_priority,
+            "extreme_daytrade_info": extreme_daytrade_info,
+            "daytrade_filter_reasons": daytrade_reasons,
         }
 
         categories: dict[str, dict[str, Any]] = {}
-        if reclaim_ok or (support_ok and kd_pullback_ok):
+        if filter_ok and (reclaim_ok or (support_ok and kd_pullback_ok)):
             categories["strong_continuation"] = {
                 **base,
                 "category": "均線收復轉強股",
                 "subtype": "跌破均線後重新站回5/10/20日線" if reclaim_ok else "回檔支撐型",
             }
-        if daily_macd_ok and breakout_ok:
+        if filter_ok and daily_macd_ok and breakout_ok:
             categories["relay_breakout"] = {
                 **base,
                 "category": "中繼再漲股",
                 "subtype": "平台突破型",
             }
-        if daily_prepare_ok and prepare_turn_ok:
+        if filter_ok and daily_prepare_ok and prepare_turn_ok:
             categories["prepare_turn"] = {
                 **base,
-                "category": "60K預備轉強股",
+                "category": "60K起漲雷達股",
                 "subtype": prepare_turn_reason,
             }
-        if daily_macd_ok and short_entry_ok:
+        if filter_ok and daily_macd_ok and short_entry_ok:
             categories["precision_entry"] = {
                 **base,
-                "category": "60K精準進場股",
+                "category": "60K精準翻紅股",
                 "subtype": short_entry_reason,
+            }
+        if extreme_daytrade_ok and daytrade_ok:
+            categories["extreme_daytrade"] = {
+                **base,
+                "category": "60K極限當沖股",
+                "subtype": extreme_daytrade_reason,
             }
         return categories
     except Exception as exc:
@@ -1632,6 +1776,9 @@ def screen_short_entry_only(
     stop = calculate_stop_loss(daily, cfg)
     if stop["stop_loss"] is None:
         return {}
+    filter_ok, _ = common_trade_filter_ok(daily, cfg, row, stop)
+    if not filter_ok:
+        return {}
 
     try:
         inst = institutional_signals(stock_id, cfg)
@@ -1660,7 +1807,7 @@ def screen_short_entry_only(
         "trust_5d_net": trust_net,
         "inst_5d_total_net": inst_total_net,
         "turnover": float(row["Trading_Volume"]) * stop["last_close"],
-        "category": "60K精準進場股",
+        "category": "60K精準翻紅股",
         "subtype": short_entry_reason,
     }
     return {"precision_entry": item}
@@ -1669,8 +1816,9 @@ def screen_short_entry_only(
 CATEGORY_TITLES = {
     "strong_continuation": "第一類：均線收復轉強股（空翻多精英型）",
     "relay_breakout": "第二類：中繼再漲股（平台突破型）",
-    "prepare_turn": "第三類：60K預備轉強股（提前雷達型）",
-    "precision_entry": "第四類：60K精準進場股",
+    "prepare_turn": "第三類：60K起漲雷達股（提前觀察型）",
+    "precision_entry": "第四類：60K精準翻紅股",
+    "extreme_daytrade": "第五類：60K極限當沖股（高波動短打型）",
 }
 
 LIMITED_CATEGORY_COUNTS = {
@@ -1678,6 +1826,7 @@ LIMITED_CATEGORY_COUNTS = {
     "relay_breakout": 3,
     "prepare_turn": 3,
     "precision_entry": 3,
+    "extreme_daytrade": 5,
     "shortlist": 9,
 }
 
@@ -2151,7 +2300,7 @@ def format_status_report(error_text: str, cfg: Config) -> tuple[str, str]:
     safe_error = error_text.replace(os.getenv("FINMIND_TOKEN", ""), "[hidden]")
     plain = "\n\n".join(
         [
-            f"台股每日排程已於 {report_date} 啟動，但本次未能完成正式四大類選股報告。",
+            f"台股每日排程已於 {report_date} 啟動，但本次未能完成正式五大類選股報告。",
             "你仍收到這封信，代表每日通知機制有啟動；請稍後檢查資料源、FinMind 額度、GitHub Actions 或 Gmail SMTP 設定。",
             "可能原因：休市資料尚未更新、FinMind 免費額度上限、Yahoo Finance 暫時無回應、網路或 SMTP 驗證失敗。",
             "錯誤摘要：",
@@ -2161,7 +2310,7 @@ def format_status_report(error_text: str, cfg: Config) -> tuple[str, str]:
     html = f"""
 <html><body>
 <h2>台股每日排程狀態通知 - {report_date}</h2>
-<p>今日排程已啟動，但未能完成正式四大類選股報告。</p>
+<p>今日排程已啟動，但未能完成正式五大類選股報告。</p>
 <p>可能原因：休市資料尚未更新、FinMind 免費額度上限、Yahoo Finance 暫時無回應、網路或 SMTP 驗證失敗。</p>
 <pre>{safe_error[-3000:]}</pre>
 </body></html>
@@ -2185,7 +2334,7 @@ def format_category_section(title: str, rows: list[dict[str, Any]]) -> tuple[str
 
 
 def format_shortlist_section(rows: list[dict[str, Any]]) -> tuple[str, str]:
-    title = "今日短線精選排名（不含法人觀察股）"
+    title = "今日短線精選排名（不含第五類當沖股）"
     if not rows:
         empty_df = pd.DataFrame(
             [{"排名": "今日無符合標的", "股票代號": "", "股名": "", "所屬類別": "", "短線分數": ""}],
@@ -2459,7 +2608,7 @@ def run(cfg: Config) -> dict[str, list[dict[str, Any]]]:
             categorized = screen_stock(row, fallback_cfg)
             if "prepare_turn" in categorized:
                 results["prepare_turn"].append(categorized["prepare_turn"])
-                print(f"  -> matched {row['stock_id']} {row['stock_name']} [60K預備轉強股]")
+                print(f"  -> matched {row['stock_id']} {row['stock_name']} [60K起漲雷達股]")
 
     finalize_results(results)
     return results
@@ -2472,12 +2621,27 @@ def finalize_results(results: dict[str, list[dict[str, Any]]]) -> None:
         for row in rows:
             row["category_keys"] = [key]
             row["category_names"] = [row.get("category", "")]
-            score_short_candidate(row)
+            if key == "extreme_daytrade":
+                row["short_score"] = 0
+                row["score_reasons"] = ["60K極限當沖訊號"]
+                row["score_warnings"] = ["當沖股不列入短線精選排名"]
+                row["top_reason"] = "60K修正後連三根收復5/10MA，適合獨立觀察當沖節奏。"
+            else:
+                score_short_candidate(row)
 
     for key, rows in results.items():
         if key == "shortlist":
             continue
-        if key == "precision_entry":
+        if key == "extreme_daytrade":
+            rows.sort(
+                key=lambda item: (
+                    int(item.get("extreme_daytrade_priority") or 0),
+                    float(item.get("turnover") or 0),
+                    int(item.get("volume_lots") or 0),
+                ),
+                reverse=True,
+            )
+        elif key == "precision_entry":
             rows.sort(
                 key=lambda item: (
                     int(item.get("short_score") or 0),
