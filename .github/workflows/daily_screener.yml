@@ -2,11 +2,14 @@ name: Daily Taiwan Stock Screener
 
 on:
   schedule:
-    # 20:17 Asia/Taipei is 12:17 UTC. Extra catch-up slots reduce missed GitHub cron runs.
-    - cron: "17 12 * * *"
-    - cron: "47 12 * * *"
-    - cron: "17 13 * * *"
-    - cron: "17 14 * * *"
+    # Start earlier because the strategy no longer waits for institutional data as a hard gate.
+    # 17:17/17:47/18:17/18:47/19:17 Asia/Taipei = 09:17/09:47/10:17/10:47/11:17 UTC.
+    # The script uses --skip-if-sent, so catch-up slots will not send duplicate reports.
+    - cron: "17 9 * * *"
+    - cron: "47 9 * * *"
+    - cron: "17 10 * * *"
+    - cron: "47 10 * * *"
+    - cron: "17 11 * * *"
   workflow_dispatch:
 
 permissions:
