@@ -2,18 +2,20 @@ name: Daily Taiwan Stock Screener
 
 on:
   schedule:
-    # Start earlier because the strategy no longer waits for institutional data as a hard gate.
-    # 17:17/17:47/18:17/18:47/19:17 Asia/Taipei = 09:17/09:47/10:17/10:47/11:17 UTC.
-    # The script uses --skip-if-sent, so catch-up slots will not send duplicate reports.
-    - cron: "17 9 * * *"
-    - cron: "47 9 * * *"
-    - cron: "17 10 * * *"
-    - cron: "47 10 * * *"
-    - cron: "17 11 * * *"
+    # Taiwan evening catch-up window.
+    # 17:07-21:52 Asia/Taipei = 09:07-13:52 UTC; 22:07 Asia/Taipei = 14:07 UTC.
+    # GitHub scheduled runs can be delayed or occasionally skipped, so use several
+    # insurance slots. The script uses --skip-if-sent to prevent duplicate emails.
+    - cron: "7,22,37,52 9-13 * * *"
+    - cron: "7 14 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: daily-tw-stock-screener-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   run-screener:

@@ -1954,14 +1954,26 @@ def evaluate_trade_path(
             "return_pct": None,
         }
 
-    max_high = float(hist["high"].max())
-    min_low = float(hist["low"].min())
+    high_col = "high" if "high" in hist.columns else "max"
+    low_col = "low" if "low" in hist.columns else "min"
+    if high_col not in hist.columns or low_col not in hist.columns or "close" not in hist.columns:
+        return {
+            "status": "資料欄位不足",
+            "max_high": None,
+            "min_low": None,
+            "latest_close": None,
+            "hit_date": "",
+            "return_pct": None,
+        }
+
+    max_high = float(hist[high_col].max())
+    min_low = float(hist[low_col].min())
     latest_close = float(hist.iloc[-1]["close"])
     status = "尚未觸發"
     hit_date = ""
     for _, bar in hist.iterrows():
-        high_hit = float(bar["high"]) >= target_price
-        low_hit = float(bar["low"]) <= stop_price
+        high_hit = float(bar[high_col]) >= target_price
+        low_hit = float(bar[low_col]) <= stop_price
         bar_date = str(pd.to_datetime(bar["date"]).date())
         if high_hit and low_hit:
             status = "同日觸及，需人工判斷"
