@@ -2554,7 +2554,7 @@ def send_email(subject: str, body: str, cfg: Config, attachments: list[Path] | N
     print(f"[email] sent to {cfg.email_to}")
 
 
-def notify(subject: str, body: str, cfg: Config) -> None:
+def notify(subject: str, body: str, cfg: Config) -> bool:
     with open("last_report.txt", "w", encoding="utf-8") as fh:
         fh.write(subject)
         fh.write("\n\n")
@@ -2571,6 +2571,7 @@ def notify(subject: str, body: str, cfg: Config) -> None:
     if not sent:
         print(subject)
         print(body.split("\n\nHTML_TABLE:\n")[0])
+    return sent
 
 
 def run(cfg: Config) -> dict[str, list[dict[str, Any]]]:
@@ -2774,8 +2775,8 @@ def main() -> int:
         print(subject)
         print(body.split("\n\nHTML_TABLE:\n")[0])
     else:
-        notify(subject, body, cfg)
-        if formal_report_ready:
+        notification_sent = notify(subject, body, cfg)
+        if notification_sent:
             mark_sent_today(subject, cfg)
     return 0
 
