@@ -2776,7 +2776,7 @@ def main() -> int:
         print(body.split("\n\nHTML_TABLE:\n")[0])
     else:
         notification_sent = notify(subject, body, cfg)
-        if notification_sent:
+        if notification_sent and formal_report_ready:
             mark_sent_today(subject, cfg)
     return 0
 

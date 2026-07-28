@@ -51,11 +51,24 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Guard Taiwan evening delivery window
+        id: delivery-window
+        run: |
+          hour="$(TZ=Asia/Taipei date +%H)"
+          echo "Taiwan hour: ${hour}"
+          if [ "${hour}" -lt 18 ] || [ "${hour}" -gt 22 ]; then
+            echo "Outside Taiwan evening delivery window; skip delayed scheduled run."
+            echo "run_screener=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "run_screener=true" >> "$GITHUB_OUTPUT"
+
       - name: Run screener and send email report
+        if: steps.delivery-window.outputs.run_screener == 'true'
         run: python tw_stock_screener.py --skip-if-sent
 
       - name: Persist screener journal
-        if: always()
+        if: always() && steps.delivery-window.outputs.run_screener == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -69,7 +82,7 @@ jobs:
           fi
 
       - name: Upload latest report artifact
-        if: always()
+        if: always() && steps.delivery-window.outputs.run_screener == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: latest-screener-report
