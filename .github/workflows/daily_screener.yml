@@ -2,12 +2,16 @@ name: Daily Taiwan Stock Screener
 
 on:
   schedule:
-    # Taiwan evening catch-up window.
-    # 17:07-21:52 Asia/Taipei = 09:07-13:52 UTC; 22:07 Asia/Taipei = 14:07 UTC.
+    # Taiwan 19:00 target delivery window.
     # GitHub scheduled runs can be delayed or occasionally skipped, so use several
-    # insurance slots. The script uses --skip-if-sent to prevent duplicate emails.
-    - cron: "7,22,37,52 9-13 * * *"
-    - cron: "7 14 * * *"
+    # insurance slots around 19:00. The script uses --skip-if-sent to prevent
+    # duplicate emails after the first successful delivery.
+    # 18:45/18:55 Asia/Taipei = 10:45/10:55 UTC.
+    - cron: "45,55 10 * * *"
+    # 19:05-19:55 Asia/Taipei = 11:05-11:55 UTC.
+    - cron: "5,15,25,35,45,55 11 * * *"
+    # 20:10/20:30/20:50 Asia/Taipei = 12:10/12:30/12:50 UTC.
+    - cron: "10,30,50 12 * * *"
   workflow_dispatch:
 
 permissions:
