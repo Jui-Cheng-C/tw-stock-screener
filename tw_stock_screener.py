@@ -1501,7 +1501,10 @@ def revenue_ok(stock_id: str, cfg: Config) -> tuple[bool, float | None, float | 
 
 def get_universe(cfg: Config) -> pd.DataFrame:
     if not cfg.finmind_token:
-        raise RuntimeError("FINMIND_TOKEN is empty. Fill it in .env before running the screener.")
+        raise RuntimeError(
+            "FINMIND_TOKEN is empty. Fill it in .env for local runs, or add FINMIND_TOKEN "
+            "to GitHub Actions Secrets for cloud runs."
+        )
     info = finmind_get("TaiwanStockInfo", token=cfg.finmind_token)
     info = info[
         info["type"].isin(["twse", "tpex"])
@@ -2309,7 +2312,14 @@ def format_report(
 def format_status_report(error_text: str, cfg: Config) -> tuple[str, str]:
     report_date = cfg_date(cfg)
     subject = f"台股每日排程狀態通知 - {report_date}"
-    safe_error = error_text.replace(os.getenv("FINMIND_TOKEN", ""), "[hidden]")
+    safe_error = error_text
+    finmind_token = os.getenv("FINMIND_TOKEN", "")
+    if finmind_token:
+        safe_error = safe_error.replace(finmind_token, "[hidden]")
+    for secret_name in ("SMTP_PASSWORD", "GMAIL_PASSWORD", "LINE_NOTIFY_TOKEN"):
+        secret_value = os.getenv(secret_name, "")
+        if secret_value:
+            safe_error = safe_error.replace(secret_value, "[hidden]")
     plain = "\n\n".join(
         [
             f"台股每日排程已於 {report_date} 啟動，但本次未能完成正式五大類選股報告。",
