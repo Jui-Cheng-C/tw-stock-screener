@@ -1,12 +1,277 @@
-
-<html><body>
-<h2>台股每日排程狀態通知 - 2026-08-04</h2>
-<p>今日排程已啟動，但未能完成正式五大類選股報告。</p>
-<p>可能原因：休市資料尚未更新、FinMind 免費額度上限、Yahoo Finance 暫時無回應、網路或 SMTP 驗證失敗。</p>
-<pre>en]e[hidden]r[hidden]s[hidden]e[hidden]([hidden]c[hidden]f[hidden]g[hidden])[hidden]
-[hidden] [hidden] [hidden] [hidden] [hidden] [hidden] [hidden] [hidden] [hidden] [hidden] [hidden] [hidden] [hidden] [hidden] [hidden] [hidden]^[hidden]^[hidden]^[hidden]^[hidden]^[hidden]^[hidden]^[hidden]^[hidden]^[hidden]^[hidden]^[hidden]^[hidden]^[hidden]^[hidden]^[hidden]^[hidden]^[hidden]
-[hidden] [hidden] [hidden]F[hidden]i[hidden]l[hidden]e[hidden] [hidden]"[hidden]/[hidden]h[hidden]o[hidden]m[hidden]e[hidden]/[hidden]r[hidden]u[hidden]n[hidden]n[hidden]e[hidden]r[hidden]/[hidden]w[hidden]o[hidden]r[hidden]k[hidden]/[hidden]t[hidden]w[hidden]-[hidden]s[hidden]t[hidden]o[hidden]c[hidden]k[hidden]-[hidden]s[hidden]c[hidden]r[hidden]e[hidden]e[hidden]n[hidden]e[hidden]r[hidden]/[hidden]t[hidden]w[hidden]-[hidden]s[hidden]t[hidden]o[hidden]c[hidden]k[hidden]-[hidden]s[hidden]c[hidden]r[hidden]e[hidden]e[hidden]n[hidden]e[hidden]r[hidden]/[hidden]t[hidden]w[hidden]_[hidden]s[hidden]t[hidden]o[hidden]c[hidden]k[hidden]_[hidden]s[hidden]c[hidden]r[hidden]e[hidden]e[hidden]n[hidden]e[hidden]r[hidden].[hidden]p[hidden]y[hidden]"[hidden],[hidden] [hidden]l[hidden]i[hidden]n[hidden]e[hidden] [hidden]1[hidden]5[hidden]0[hidden]4[hidden],[hidden] [hidden]i[hidden]n[hidden] [hidden]g[hidden]e[hidden]t[hidden]_[hidden]u[hidden]n[hidden]i[hidden]v[hidden]e[hidden]r[hidden]s[hidden]e[hidden]
-[hidden] [hidden] [hidden] [hidden] [hidden]r[hidden]a[hidden]i[hidden]s[hidden]e[hidden] [hidden]R[hidden]u[hidden]n[hidden]t[hidden]i[hidden]m[hidden]e[hidden]E[hidden]r[hidden]r[hidden]o[hidden]r[hidden]([hidden]"[hidden]F[hidden]I[hidden]N[hidden]M[hidden]I[hidden]N[hidden]D[hidden]_[hidden]T[hidden]O[hidden]K[hidden]E[hidden]N[hidden] [hidden]i[hidden]s[hidden] [hidden]e[hidden]m[hidden]p[hidden]t[hidden]y[hidden].[hidden] [hidden]F[hidden]i[hidden]l[hidden]l[hidden] [hidden]i[hidden]t[hidden] [hidden]i[hidden]n[hidden] [hidden].[hidden]e[hidden]n[hidden]v[hidden] [hidden]b[hidden]e[hidden]f[hidden]o[hidden]r[hidden]e[hidden] [hidden]r[hidden]u[hidden]n[hidden]n[hidden]i[hidden]n[hidden]g[hidden] [hidden]t[hidden]h[hidden]e[hidden] [hidden]s[hidden]c[hidden]r[hidden]e[hidden]e[hidden]n[hidden]e[hidden]r[hidden].[hidden]"[hidden])[hidden]
-[hidden]R[hidden]u[hidden]n[hidden]t[hidden]i[hidden]m[hidden]e[hidden]E[hidden]r[hidden]r[hidden]o[hidden]r[hidden]:[hidden] [hidden]F[hidden]I[hidden]N[hidden]M[hidden]I[hidden]N[hidden]D[hidden]_[hidden]T[hidden]O[hidden]K[hidden]E[hidden]N[hidden] [hidden]i[hidden]s[hidden] [hidden]e[hidden]m[hidden]p[hidden]t[hidden]y[hidden].[hidden] [hidden]F[hidden]i[hidden]l[hidden]l[hidden] [hidden]i[hidden]t[hidden] [hidden]i[hidden]n[hidden] [hidden].[hidden]e[hidden]n[hidden]v[hidden] [hidden]b[hidden]e[hidden]f[hidden]o[hidden]r[hidden]e[hidden] [hidden]r[hidden]u[hidden]n[hidden]n[hidden]i[hidden]n[hidden]g[hidden] [hidden]t[hidden]h[hidden]e[hidden] [hidden]s[hidden]c[hidden]r[hidden]e[hidden]e[hidden]n[hidden]e[hidden]r[hidden].[hidden]
-[hidden]</pre>
-</body></html>
+<html><head><meta charset='utf-8'>
+<style>
+body{font-family:'Microsoft JhengHei','Noto Sans TC',Arial,sans-serif;background:#f7f4ef;color:#24302f;margin:0;padding:24px;line-height:1.65;}
+.wrap{max-width:980px;margin:0 auto;}
+h2{font-size:28px;margin:0 0 8px;color:#1d2d2b;}
+h3{font-size:19px;margin:0 0 12px;color:#24302f;}
+.subtitle,.muted{color:#6f7a76;font-size:14px;}
+.card{background:#fffdfa;border:1px solid #eadfce;border-radius:14px;padding:18px 20px;margin:18px 0;box-shadow:0 6px 18px rgba(73,58,38,.06);}
+.alert-card{border-color:#e7b8b2;background:#fff8f6;}
+.report-table{width:100%;border-collapse:collapse;font-size:14px;background:white;}
+.report-table th{background:#efe7da;color:#38433f;text-align:left;padding:10px;border-bottom:1px solid #ddcfbd;}
+.report-table td{padding:10px;border-bottom:1px solid #eee5d9;vertical-align:top;}
+.rank-one{background:#fff2c2;border-radius:999px;padding:2px 8px;font-weight:700;color:#765b00;}
+.hit{color:#b23b3b;font-weight:700;}
+.risk{color:#b72f2f;font-weight:700;}
+.note{background:#eef6f4;border-left:4px solid #7ea89a;padding:10px 12px;border-radius:8px;color:#40504c;}
+</style></head><body><div class='wrap'>
+<h2>台股短線精選報告 - 2026-08-04</h2>
+<p class='subtitle'>本次共篩出 14 筆分類結果。若遇休市，資料來源可能回傳最近一個交易日。</p>
+<p class='note'>策略紀律：短線目標以 6% 至 10% 為主，停損防守線需優先於期待報酬。</p>
+<section class='card'><h3>第一類：均線收復轉強股（空翻多精英型）</h3><p>3 項</p><table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>股票代號</th>
+      <th>股名</th>
+      <th>今日收盤價</th>
+      <th>今日成交量(張)</th>
+      <th>建議停損價(防守線)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2881</td>
+      <td>富邦金</td>
+      <td>128.50</td>
+      <td>29276</td>
+      <td>125.64</td>
+    </tr>
+    <tr>
+      <td>3706</td>
+      <td>神達</td>
+      <td>91.30</td>
+      <td>14237</td>
+      <td>88.87</td>
+    </tr>
+    <tr>
+      <td>1477</td>
+      <td>聚陽</td>
+      <td>222.00</td>
+      <td>2220</td>
+      <td>217.68</td>
+    </tr>
+  </tbody>
+</table></section>
+<section class='card'><h3>第二類：中繼再漲股（平台突破型）</h3><p>0 項</p><table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>股票代號</th>
+      <th>股名</th>
+      <th>今日收盤價</th>
+      <th>今日成交量(張)</th>
+      <th>建議停損價(防守線)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>今日無符合標的</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table></section>
+<section class='card'><h3>第三類：60K起漲雷達股（提前觀察型）</h3><p>3 項</p><table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>股票代號</th>
+      <th>股名</th>
+      <th>今日收盤價</th>
+      <th>今日成交量(張)</th>
+      <th>建議停損價(防守線)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2377</td>
+      <td>微星</td>
+      <td>149.50</td>
+      <td>19511</td>
+      <td>144.18</td>
+    </tr>
+    <tr>
+      <td>8112</td>
+      <td>至上</td>
+      <td>85.20</td>
+      <td>17201</td>
+      <td>83.42</td>
+    </tr>
+    <tr>
+      <td>3706</td>
+      <td>神達</td>
+      <td>91.30</td>
+      <td>14237</td>
+      <td>88.87</td>
+    </tr>
+  </tbody>
+</table></section>
+<section class='card'><h3>第四類：60K精準翻紅股</h3><p>1 項</p><table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>股票代號</th>
+      <th>股名</th>
+      <th>今日收盤價</th>
+      <th>今日成交量(張)</th>
+      <th>建議停損價(防守線)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1476</td>
+      <td>儒鴻</td>
+      <td>354.50</td>
+      <td>1242</td>
+      <td>338.70</td>
+    </tr>
+  </tbody>
+</table></section>
+<section class='card'><h3>第五類：60K極限當沖股（高波動短打型）</h3><p>1 項</p><table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>股票代號</th>
+      <th>股名</th>
+      <th>今日收盤價</th>
+      <th>今日成交量(張)</th>
+      <th>建議停損價(防守線)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1216</td>
+      <td>統一</td>
+      <td>73.90</td>
+      <td>25958</td>
+      <td>72.04</td>
+    </tr>
+  </tbody>
+</table></section>
+<section class='card'><h3>今日短線精選排名（不含第五類當沖股）</h3><p>6 項</p><table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>排名</th>
+      <th>股票代號</th>
+      <th>股名</th>
+      <th>所屬類別</th>
+      <th>短線分數</th>
+      <th>今日收盤價</th>
+      <th>今日成交量(張)</th>
+      <th>建議停損價(防守線)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class='rank-one'>1</span></td>
+      <td>2881</td>
+      <td>富邦金</td>
+      <td>均線收復轉強股</td>
+      <td>100</td>
+      <td>128.50</td>
+      <td>29276</td>
+      <td>125.64</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>2377</td>
+      <td>微星</td>
+      <td>60K起漲雷達股</td>
+      <td>100</td>
+      <td>149.50</td>
+      <td>19511</td>
+      <td>144.18</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>8112</td>
+      <td>至上</td>
+      <td>60K起漲雷達股</td>
+      <td>100</td>
+      <td>85.20</td>
+      <td>17201</td>
+      <td>83.42</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>3706</td>
+      <td>神達</td>
+      <td>均線收復轉強股、60K起漲雷達股</td>
+      <td>100</td>
+      <td>91.30</td>
+      <td>14237</td>
+      <td>88.87</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>1477</td>
+      <td>聚陽</td>
+      <td>均線收復轉強股</td>
+      <td>100</td>
+      <td>222.00</td>
+      <td>2220</td>
+      <td>217.68</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>1476</td>
+      <td>儒鴻</td>
+      <td>60K精準翻紅股</td>
+      <td>100</td>
+      <td>354.50</td>
+      <td>1242</td>
+      <td>338.70</td>
+    </tr>
+  </tbody>
+</table></section>
+<section class='card'><h3>今日短線精選 Top 3 操作理由</h3><table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>排名</th>
+      <th>股票</th>
+      <th>操作理由</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>2881 富邦金</td>
+      <td>跌破均線後重新收復、站上季線且季線翻揚、投信連買；停損線需嚴格執行。</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>2377 微星</td>
+      <td>60K起漲雷達、60K雷達訊號在0軸上、日K站上10/20日線；停損線需嚴格執行。</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>8112 至上</td>
+      <td>60K起漲雷達、60K雷達訊號在0軸上、60K支撐後收復；停損線需嚴格執行。</td>
+    </tr>
+  </tbody>
+</table></section>
+<section class='card alert-card'><h3>🚨 警示！候選股近期大事</h3><p class='muted'>以公開資訊觀測站重大訊息為主，Yahoo 股市新聞關鍵字為備援；警示僅作為盤前風控提醒。</p><table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>股票代號</th>
+      <th>股名</th>
+      <th>警示內容</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2881</td>
+      <td>富邦金</td>
+      <td>目前未偵測到重大訊息、法說會或除權息關鍵警示</td>
+    </tr>
+    <tr>
+      <td>2377</td>
+      <td>微星</td>
+      <td><span class='risk'>微星確定8/20除息 每股配息4.2元9/17發放；【公告】微星董事長訂定除息基準日</span></td>
+    </tr>
+    <tr>
+      <td>8112</td>
+      <td>至上</td>
+      <td><span class='risk'>【公告】至上普通股現金股利除息基準日、發放日暨國內第十次無擔保轉換公司債停止轉換期間及調整普通股現金股利配息率；【公告】至上甲種特別股股息之除息基準日及發放日</span></td>
+    </tr>
+  </tbody>
+</table></section>
+</div></body></html>
