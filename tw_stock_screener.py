@@ -2309,6 +2309,45 @@ def format_report(
     return subject, "\n\n".join(text_sections) + "\n\nHTML_TABLE:\n" + "\n".join(html_sections)
 
 
+def summarize_status_error(error_text: str) -> tuple[str, str, str]:
+    lowered = error_text.lower()
+    if "finmind_token is empty" in lowered:
+        return (
+            "GitHub Actions 尚未設定 FINMIND_TOKEN",
+            "請到 GitHub 倉庫 Settings > Secrets and variables > Actions 新增 FINMIND_TOKEN。",
+            "雲端不會讀取本機 .env，所以本機能跑不代表 GitHub Actions 能抓 FinMind 資料。",
+        )
+    if "smtp" in lowered or "authentication" in lowered:
+        return (
+            "Email SMTP 驗證或寄送失敗",
+            "請確認 GitHub Actions Secrets 中的 GMAIL_USER 與 GMAIL_PASSWORD 是否正確。",
+            "若 Gmail 應用程式密碼被重設或撤銷，雲端會無法寄出正式報告。",
+        )
+    if "yfinance" in lowered or "yahoo" in lowered:
+        return (
+            "Yahoo Finance 資料源暫時無回應",
+            "通常稍後重新執行即可；若遇休市或資料延遲，當日可能只有狀態通知。",
+            "這類問題多半不是策略失效，而是外部行情資料尚未完整更新。",
+        )
+    if "finmind" in lowered or "http 400" in lowered or "http 429" in lowered:
+        return (
+            "FinMind 資料源或免費額度異常",
+            "請稍後重新執行，或確認 FinMind Token 仍有效且未超過免費額度。",
+            "籌碼、營收或股東分級資料依賴 FinMind，該資料源異常時會影響正式報告。",
+        )
+    if "no data" in lowered or "empty" in lowered:
+        return (
+            "今日行情資料不足或尚未更新",
+            "若今天是休市、國定假日、颱風停市或盤後資料尚未同步，收到狀態通知屬正常防呆。",
+            "程式會避免產生錯誤表格，等下一次有完整資料時再寄正式報告。",
+        )
+    return (
+        "排程已啟動，但正式報告未完成",
+        "請到 GitHub Actions 查看最新 workflow log，或稍後再手動觸發一次 cron-job.org TEST RUN。",
+        "程式已隱藏技術錯誤細節，避免 Email 出現亂碼或敏感資訊。",
+    )
+
+
 def format_status_report(error_text: str, cfg: Config) -> tuple[str, str]:
     report_date = cfg_date(cfg)
     subject = f"台股每日排程狀態通知 - {report_date}"
@@ -2320,21 +2359,27 @@ def format_status_report(error_text: str, cfg: Config) -> tuple[str, str]:
         secret_value = os.getenv(secret_name, "")
         if secret_value:
             safe_error = safe_error.replace(secret_value, "[hidden]")
+    reason, action, note = summarize_status_error(safe_error)
     plain = "\n\n".join(
         [
             f"台股每日排程已於 {report_date} 啟動，但本次未能完成正式五大類選股報告。",
-            "你仍收到這封信，代表每日通知機制有啟動；請稍後檢查資料源、FinMind 額度、GitHub Actions 或 Gmail SMTP 設定。",
-            "可能原因：休市資料尚未更新、FinMind 免費額度上限、Yahoo Finance 暫時無回應、網路或 SMTP 驗證失敗。",
-            "錯誤摘要：",
-            safe_error[-3000:],
+            f"原因判斷：{reason}",
+            f"建議處理：{action}",
+            f"補充說明：{note}",
         ]
     )
     html = f"""
-<html><body>
-<h2>台股每日排程狀態通知 - {report_date}</h2>
-<p>今日排程已啟動，但未能完成正式五大類選股報告。</p>
-<p>可能原因：休市資料尚未更新、FinMind 免費額度上限、Yahoo Finance 暫時無回應、網路或 SMTP 驗證失敗。</p>
-<pre>{safe_error[-3000:]}</pre>
+<html><body style="font-family:'Microsoft JhengHei',Arial,sans-serif;line-height:1.7;color:#243042;">
+<div style="max-width:760px;margin:0 auto;padding:24px;">
+<h2 style="margin:0 0 16px;">台股每日排程狀態通知 - {report_date}</h2>
+<p>今日排程已啟動，但本次未能完成正式五大類選股報告。</p>
+<div style="border-left:4px solid #d97706;background:#fff7ed;padding:14px 16px;margin:18px 0;">
+<p><strong>原因判斷：</strong>{escape(reason)}</p>
+<p><strong>建議處理：</strong>{escape(action)}</p>
+<p><strong>補充說明：</strong>{escape(note)}</p>
+</div>
+<p style="color:#64748b;font-size:13px;">本通知已自動隱藏技術錯誤與敏感資訊，不會再附上亂碼 traceback。</p>
+</div>
 </body></html>
 """
     return subject, plain + "\n\nHTML_TABLE:\n" + html
