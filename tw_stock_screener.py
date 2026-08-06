@@ -119,6 +119,9 @@ class Config:
     only_prepare_turn: bool = dataclasses.field(
         default_factory=lambda: env_bool("ONLY_PREPARE_TURN", False)
     )
+    intraday_alert_only: bool = dataclasses.field(
+        default_factory=lambda: env_bool("INTRADAY_ALERT_ONLY", False)
+    )
     prepare_turn_fallback_volume_shares: int = dataclasses.field(
         default_factory=lambda: env_int("PREPARE_TURN_FALLBACK_VOLUME_SHARES", 800000)
     )
@@ -145,6 +148,26 @@ class Config:
     )
     max_stop_loss_risk_pct: float = dataclasses.field(
         default_factory=lambda: env_float("MAX_STOP_LOSS_RISK_PCT", 5.0)
+    )
+    relay_max_stop_loss_risk_pct: float = dataclasses.field(
+        default_factory=lambda: env_float("RELAY_MAX_STOP_LOSS_RISK_PCT", 5.0)
+    )
+    precision_max_stop_loss_risk_pct: float = dataclasses.field(
+        default_factory=lambda: env_float("PRECISION_MAX_STOP_LOSS_RISK_PCT", 3.0)
+    )
+    ntfy_server: str = dataclasses.field(default_factory=lambda: env_str("NTFY_SERVER", "https://ntfy.sh"))
+    ntfy_topic: str = dataclasses.field(default_factory=lambda: env_str("NTFY_TOPIC"))
+    enable_ntfy_intraday_alerts: bool = dataclasses.field(
+        default_factory=lambda: env_bool("ENABLE_NTFY_INTRADAY_ALERTS", True)
+    )
+    market_filter_symbol: str = dataclasses.field(
+        default_factory=lambda: env_str("MARKET_FILTER_SYMBOL", "^TWII")
+    )
+    market_min_daily_pct: float = dataclasses.field(
+        default_factory=lambda: env_float("MARKET_MIN_DAILY_PCT", -1.2)
+    )
+    market_min_intraday_pct: float = dataclasses.field(
+        default_factory=lambda: env_float("MARKET_MIN_INTRADAY_PCT", -0.8)
     )
 
 
@@ -278,6 +301,20 @@ def get_yahoo_intraday(
     return filter_by_report_date(out, cfg) if cfg else out
 
 
+def intraday_session_is_current(kbar: pd.DataFrame, cfg: Config, min_bars: int = 4) -> bool:
+    if kbar.empty or "date" not in kbar.columns:
+        return False
+    report_day = dt.date.fromisoformat(cfg_date(cfg))
+    dates = pd.to_datetime(kbar["date"], errors="coerce")
+    if dates.isna().all():
+        return False
+    last_date = dates.dropna().max().date()
+    if last_date != report_day:
+        return False
+    today_bars = kbar[dates.dt.date == report_day]
+    return len(today_bars) >= min_bars
+
+
 def add_indicators(df: pd.DataFrame, atr_period: int = 14) -> pd.DataFrame:
     out = df.copy()
     close = out["close"].astype(float)
@@ -303,7 +340,35 @@ def add_indicators(df: pd.DataFrame, atr_period: int = 14) -> pd.DataFrame:
     out["dif"] = ema12 - ema26
     out["macd"] = out["dif"].ewm(span=9, adjust=False).mean()
     out["hist"] = out["dif"] - out["macd"]
+    std20 = close.rolling(20).std()
+    out["bb_upper"] = out["ma20"] + 2 * std20
+    out["bb_lower"] = out["ma20"] - 2 * std20
+    out["bb_width"] = (out["bb_upper"] - out["bb_lower"]) / out["ma20"].replace(0, pd.NA)
     return out
+
+
+def ma_deduction_up(ind: pd.DataFrame, lookback: int) -> bool:
+    if len(ind) < lookback + 1 or "close" not in ind.columns:
+        return False
+    latest = float(ind.iloc[-1]["close"])
+    compare = float(ind.iloc[-lookback - 1]["close"])
+    return latest >= compare
+
+
+def ma_slope_flat_or_up(ind: pd.DataFrame, column: str = "ma20", days: int = 3, tolerance_pct: float = 0.15) -> bool:
+    if len(ind) < days + 1 or column not in ind.columns:
+        return False
+    series = pd.to_numeric(ind[column], errors="coerce").dropna()
+    if len(series) < days + 1:
+        return False
+    latest = float(series.iloc[-1])
+    previous = float(series.iloc[-2])
+    anchor = float(series.iloc[-days - 1])
+    if latest <= 0 or anchor <= 0:
+        return False
+    one_day_flat = (latest - previous) / latest * 100 >= -tolerance_pct
+    multi_day_flat = (latest - anchor) / anchor * 100 >= -tolerance_pct * days
+    return bool(one_day_flat and multi_day_flat)
 
 
 def resample_ohlcv(df: pd.DataFrame, rule: str) -> pd.DataFrame:
@@ -410,6 +475,50 @@ def calculate_stop_loss(daily: pd.DataFrame, cfg: Config) -> dict[str, Any]:
         }
 
     method, stop_price = max(valid, key=lambda item: item[1])
+    return {
+        "last_close": close,
+        "stop_loss": round(stop_price, 2),
+        "stop_loss_risk_pct": round((close - stop_price) / close * 100, 2),
+        "stop_loss_method": method,
+    }
+
+
+def calculate_relay_stop_loss(daily: pd.DataFrame, cfg: Config) -> dict[str, Any]:
+    """Second-category structural stop: breakout point or red-candle midpoint."""
+    ind = add_indicators(daily, cfg.atr_period)
+    if len(ind) < 25:
+        return calculate_stop_loss(daily, cfg)
+    latest = ind.iloc[-1]
+    close = float(latest["close"])
+    open_price = float(latest["open"])
+    buffer = cfg.stop_loss_buffer_pct / 100
+
+    recent20 = ind.tail(20).copy()
+    before_today = recent20.iloc[:-1]
+    platform_high = float(before_today["max"].max()) if not before_today.empty else 0.0
+    body_mid = (open_price + close) / 2 if close > open_price else 0.0
+    ma5 = float(latest["ma5"]) if not pd.isna(latest["ma5"]) else 0.0
+    ma10 = float(latest["ma10"]) if not pd.isna(latest["ma10"]) else 0.0
+
+    candidates: list[tuple[str, float]] = []
+    if 0 < platform_high < close:
+        candidates.append(("relay_breakout_point", platform_high * (1 - buffer)))
+    if 0 < body_mid < close:
+        candidates.append(("relay_body_midpoint", body_mid))
+    for name, value in (("relay_ma5", ma5), ("relay_ma10", ma10)):
+        if 0 < value < close:
+            candidates.append((name, value * (1 - buffer)))
+
+    valid = [(name, price) for name, price in candidates if price > 0 and price < close]
+    if not valid:
+        return calculate_stop_loss(daily, cfg)
+
+    ideal = [
+        (name, price)
+        for name, price in valid
+        if 2.5 <= (close - price) / close * 100 <= 4.5
+    ]
+    method, stop_price = max(ideal or valid, key=lambda item: item[1])
     return {
         "last_close": close,
         "stop_loss": round(stop_price, 2),
@@ -822,6 +931,7 @@ def elite_reclaim_setup(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
         "hist",
         "kd_k",
         "kd_d",
+        "bb_width",
     ]
     if latest[required].isna().any() or previous[required].isna().any():
         return False, info
@@ -855,7 +965,7 @@ def elite_reclaim_setup(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
     vol5 = float(ind.tail(6).iloc[:-1]["Trading_Volume"].mean())
     vol20 = float(ind.tail(21).iloc[:-1]["Trading_Volume"].mean())
     today_vol = float(latest["Trading_Volume"])
-    volume_ok = today_vol >= vol5 * 1.15 or today_vol >= vol20 * 1.10
+    volume_ok = today_vol >= vol5 * 1.3 and today_vol >= vol20 * 1.3
 
     hist_tail = ind["hist"].tail(4).astype(float).tolist()
     hist_improving = len(hist_tail) >= 4 and hist_tail[-1] > hist_tail[-2] > hist_tail[-3]
@@ -870,6 +980,9 @@ def elite_reclaim_setup(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
     kd_turning = kd_k > kd_d and kd_k > prev_k
     kd_not_overheated = kd_k <= 85 and kd_d <= 80
 
+    ma5_deduction_ok = ma_deduction_up(ind, 5)
+    ma20_flat_or_up = ma_slope_flat_or_up(ind, "ma20", days=3, tolerance_pct=0.12)
+    bb_width_ok = float(latest["bb_width"]) >= 0.10
     not_extended = (close - ma20) / ma20 <= 0.08
     price_not_chasing = (close - low) / close <= 0.055
     trend_floor = ma20 >= ma60 * 0.96 and above_season_line and ma60_rising and season_deduction_ok
@@ -879,8 +992,11 @@ def elite_reclaim_setup(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
             had_washout,
             reclaim_ma5_ma10,
             reclaim_ma20,
+            ma5_deduction_ok,
+            ma20_flat_or_up,
             red_or_strong,
             volume_ok,
+            bb_width_ok,
             macd_constructive,
             kd_turning,
             kd_not_overheated,
@@ -895,6 +1011,9 @@ def elite_reclaim_setup(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
         "reclaim_ma20": reclaim_ma20,
         "volume_ratio_5d": round(today_vol / vol5, 2) if vol5 > 0 else 0,
         "volume_ratio_20d": round(today_vol / vol20, 2) if vol20 > 0 else 0,
+        "ma5_deduction_ok": ma5_deduction_ok,
+        "ma20_flat_or_up": ma20_flat_or_up,
+        "bb_width_pct": round(float(latest["bb_width"]) * 100, 2),
         "hist_improving": hist_improving,
         "hist_cross_red": hist_cross_red,
         "kd_k": round(kd_k, 2),
@@ -943,6 +1062,7 @@ def common_trade_filter_ok(
     cfg: Config,
     row: pd.Series,
     stop: dict[str, Any],
+    max_stop_loss_risk_pct: float | None = None,
 ) -> tuple[bool, list[str]]:
     reasons: list[str] = []
     last_close = float(stop["last_close"])
@@ -966,7 +1086,8 @@ def common_trade_filter_ok(
         reasons.append("近3日漲幅過熱")
     if ma20_distance > cfg.max_ma20_distance_pct:
         reasons.append("離月線過遠")
-    if stop_risk is None or float(stop_risk) > cfg.max_stop_loss_risk_pct:
+    max_stop = cfg.max_stop_loss_risk_pct if max_stop_loss_risk_pct is None else max_stop_loss_risk_pct
+    if stop_risk is None or float(stop_risk) > max_stop:
         reasons.append("停損距離過遠")
     return not reasons, reasons
 
@@ -1030,7 +1151,7 @@ def breakout_platform_ok(daily: pd.DataFrame) -> bool:
         return False
     ind = add_indicators(daily)
     latest = ind.iloc[-1]
-    required = ["open", "close", "max", "ma5", "ma10", "ma20", "Trading_Volume"]
+    required = ["open", "close", "max", "min", "ma5", "ma10", "ma20", "Trading_Volume"]
     if latest[required].isna().any():
         return False
 
@@ -1045,40 +1166,50 @@ def breakout_platform_ok(daily: pd.DataFrame) -> bool:
         return False
 
     platform = recent20.iloc[high_iloc:-1]
-    if len(platform) < 3:
+    if not 5 <= len(platform) <= 15:
         return False
     platform_high = float(platform["max"].max())
     platform_low = float(platform["min"].min())
-    tight_platform = platform_low > 0 and (platform_high - platform_low) / platform_low <= 0.12
+    tight_platform = platform_low > 0 and (platform_high - platform_low) / platform_low <= 0.15
 
     close = float(latest["close"])
     open_price = float(latest["open"])
     high_price = float(latest["max"])
+    low_price = float(latest["min"])
     above_short_ma = (
         close > float(latest["ma5"])
         and close > float(latest["ma10"])
         and close > float(latest["ma20"])
     )
-    red_body = close > open_price and (close - open_price) / open_price >= 0.018
+    candle_range = high_price - low_price
+    if candle_range <= 0 or open_price <= 0:
+        return False
+    red_body = close > open_price and (close - open_price) / candle_range >= 0.40
+    upper_shadow_ok = (high_price - close) / candle_range < 0.30
+    previous_close = float(ind.iloc[-2]["close"])
+    gap_ok = previous_close > 0 and (open_price - previous_close) / previous_close <= 0.05
     today_volume = float(latest["Trading_Volume"])
     platform_avg_volume = float(platform["Trading_Volume"].mean())
-    recent_avg_volume = float(ind.tail(6).iloc[:-1]["Trading_Volume"].mean())
     recent20_avg_volume = float(ind.tail(21).iloc[:-1]["Trading_Volume"].mean())
     previous_volume = float(ind.iloc[-2]["Trading_Volume"])
-    prior_volume = ind.iloc[max(0, high_iloc - 10) : high_iloc]["Trading_Volume"]
-    prior_avg_volume = float(prior_volume.mean()) if not prior_volume.empty else platform_avg_volume
+    platform_last3_avg = float(platform.tail(3)["Trading_Volume"].mean())
+    breakout_seed_volume = float(before_today.loc[high_label, "Trading_Volume"])
     volume_breakout = (
         today_volume >= previous_volume * 1.5
-        and today_volume > recent_avg_volume
         and today_volume > recent20_avg_volume
-        and today_volume > platform_avg_volume * 1.25
+        and today_volume > platform_avg_volume * 1.4
     )
-    volume_shrank = platform_avg_volume <= prior_avg_volume * 1.1
-    close_near_high = high_price > 0 and (high_price - close) / high_price <= 0.035
+    volume_shrank = (
+        platform_last3_avg <= recent20_avg_volume * 0.85
+        or float(platform["Trading_Volume"].max()) <= breakout_seed_volume * 0.80
+    )
+    close_near_high = high_price > 0 and (high_price - close) / high_price <= 0.03
     return bool(
         tight_platform
         and above_short_ma
         and red_body
+        and upper_shadow_ok
+        and gap_ok
         and volume_breakout
         and volume_shrank
         and close_near_high
@@ -1601,6 +1732,21 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         if stop["stop_loss"] is None:
             return {}
         filter_ok, filter_reasons = common_trade_filter_ok(daily, cfg, row, stop)
+        relay_stop = calculate_relay_stop_loss(daily, cfg)
+        relay_filter_ok, relay_filter_reasons = common_trade_filter_ok(
+            daily,
+            cfg,
+            row,
+            relay_stop,
+            cfg.relay_max_stop_loss_risk_pct,
+        )
+        precision_filter_ok, precision_filter_reasons = common_trade_filter_ok(
+            daily,
+            cfg,
+            row,
+            stop,
+            cfg.precision_max_stop_loss_risk_pct,
+        )
 
         kd_pullback_ok = False
         short_entry_ok = False
@@ -1616,23 +1762,25 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         extreme_daytrade_info: dict[str, Any] = {}
         if cfg.enable_intraday_check:
             intraday = get_yahoo_intraday(stock_id, market_type, cfg)
-            kd_pullback_ok = intraday_kd_low_golden_cross(intraday)
-            short_entry_ok, short_entry_reason, short_entry_priority = intraday_short_entry_signal(
-                intraday
-            )
-            prepare_turn_ok, prepare_turn_reason, prepare_turn_priority, prepare_turn_info = (
-                intraday_prepare_turn_signal(intraday)
-            )
-            (
-                extreme_daytrade_ok,
-                extreme_daytrade_reason,
-                extreme_daytrade_priority,
-                extreme_daytrade_info,
-            ) = intraday_extreme_daytrade_signal(intraday)
+            if intraday_session_is_current(intraday, cfg):
+                kd_pullback_ok = intraday_kd_low_golden_cross(intraday)
+                short_entry_ok, short_entry_reason, short_entry_priority = intraday_short_entry_signal(
+                    intraday
+                )
+                prepare_turn_ok, prepare_turn_reason, prepare_turn_priority, prepare_turn_info = (
+                    intraday_prepare_turn_signal(intraday)
+                )
+                (
+                    extreme_daytrade_ok,
+                    extreme_daytrade_reason,
+                    extreme_daytrade_priority,
+                    extreme_daytrade_info,
+                ) = intraday_extreme_daytrade_signal(intraday)
 
         daytrade_ok, daytrade_reasons = daytrade_filter_ok(row, cfg, stop)
         normal_signal_possible = daily_macd_ok or reclaim_ok or daily_trend_ok or daily_prepare_ok
-        if not ((normal_signal_possible and filter_ok) or (extreme_daytrade_ok and daytrade_ok)):
+        normal_filter_possible = filter_ok or relay_filter_ok or precision_filter_ok
+        if not ((normal_signal_possible and normal_filter_possible) or (extreme_daytrade_ok and daytrade_ok)):
             return {}
 
         foreign_net = 0
@@ -1713,6 +1861,8 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
             "trust_today_ratio": trust_today_ratio,
             "turnover": float(row["Trading_Volume"]) * stop["last_close"],
             "filter_reasons": filter_reasons,
+            "relay_filter_reasons": relay_filter_reasons,
+            "precision_filter_reasons": precision_filter_reasons,
             "extreme_daytrade_ok": extreme_daytrade_ok,
             "extreme_daytrade_reason": extreme_daytrade_reason,
             "extreme_daytrade_priority": extreme_daytrade_priority,
@@ -1721,15 +1871,27 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         }
 
         categories: dict[str, dict[str, Any]] = {}
+        relay_base = {
+            **base,
+            "stop_loss": relay_stop["stop_loss"],
+            "stop_loss_risk_pct": relay_stop["stop_loss_risk_pct"],
+            "stop_loss_method": relay_stop["stop_loss_method"],
+            "filter_reasons": relay_filter_reasons,
+        }
+        precision_base = {
+            **base,
+            "filter_reasons": precision_filter_reasons,
+        }
+
         if filter_ok and (reclaim_ok or (support_ok and kd_pullback_ok)):
             categories["strong_continuation"] = {
                 **base,
                 "category": "均線收復轉強股",
                 "subtype": "跌破均線後重新站回5/10/20日線" if reclaim_ok else "回檔支撐型",
             }
-        if filter_ok and daily_macd_ok and breakout_ok:
+        if relay_filter_ok and daily_macd_ok and breakout_ok:
             categories["relay_breakout"] = {
-                **base,
+                **relay_base,
                 "category": "中繼再漲股",
                 "subtype": "平台突破型",
             }
@@ -1739,9 +1901,9 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
                 "category": "60K起漲雷達股",
                 "subtype": prepare_turn_reason,
             }
-        if filter_ok and daily_macd_ok and short_entry_ok:
+        if precision_filter_ok and daily_macd_ok and short_entry_ok:
             categories["precision_entry"] = {
-                **base,
+                **precision_base,
                 "category": "60K精準翻紅股",
                 "subtype": short_entry_reason,
             }
@@ -1770,16 +1932,17 @@ def screen_short_entry_only(
     if not daily_common_gate(daily):
         return {}
 
-    short_entry_ok, short_entry_reason, short_entry_priority = intraday_short_entry_signal(
-        get_yahoo_intraday(stock_id, market_type, cfg)
-    )
+    intraday = get_yahoo_intraday(stock_id, market_type, cfg)
+    if not intraday_session_is_current(intraday, cfg):
+        return {}
+    short_entry_ok, short_entry_reason, short_entry_priority = intraday_short_entry_signal(intraday)
     if not short_entry_ok:
         return {}
 
     stop = calculate_stop_loss(daily, cfg)
     if stop["stop_loss"] is None:
         return {}
-    filter_ok, _ = common_trade_filter_ok(daily, cfg, row, stop)
+    filter_ok, _ = common_trade_filter_ok(daily, cfg, row, stop, cfg.precision_max_stop_loss_risk_pct)
     if not filter_ok:
         return {}
 
@@ -2545,6 +2708,97 @@ def send_line_notify_legacy(message: str, cfg: Config) -> None:
         pass
 
 
+def market_state(cfg: Config) -> dict[str, Any]:
+    symbol = cfg.market_filter_symbol or "^TWII"
+    state: dict[str, Any] = {
+        "symbol": symbol,
+        "ok": False,
+        "reason": "大盤資料不足",
+        "daily_pct": None,
+        "intraday_pct": None,
+    }
+    try:
+        daily_raw = yf.Ticker(symbol).history(period="5d", interval="1d", auto_adjust=False)
+        daily = normalize_yahoo_history(daily_raw)
+        if len(daily) >= 2:
+            latest = float(daily.iloc[-1]["close"])
+            previous = float(daily.iloc[-2]["close"])
+            if previous > 0:
+                state["daily_pct"] = (latest / previous - 1) * 100
+        intraday_raw = yf.Ticker(symbol).history(period="1d", interval="5m", auto_adjust=False)
+        intraday = normalize_yahoo_history(intraday_raw)
+        if not intraday.empty:
+            first = float(intraday.iloc[0]["open"])
+            latest = float(intraday.iloc[-1]["close"])
+            if first > 0:
+                state["intraday_pct"] = (latest / first - 1) * 100
+        daily_ok = state["daily_pct"] is not None and float(state["daily_pct"]) >= cfg.market_min_daily_pct
+        intraday_ok = (
+            state["intraday_pct"] is not None
+            and float(state["intraday_pct"]) >= cfg.market_min_intraday_pct
+        )
+        state["ok"] = bool(daily_ok and intraday_ok)
+        if state["ok"]:
+            state["reason"] = "大盤狀態允許盤中推播"
+        else:
+            state["reason"] = (
+                f"大盤偏弱或資料不足：日漲跌 {format_number(state['daily_pct'])}%、"
+                f"盤中 {format_number(state['intraday_pct'])}%"
+            )
+    except Exception as exc:
+        state["reason"] = f"大盤資料讀取失敗：{exc}"
+    return state
+
+
+def send_ntfy(message: str, cfg: Config, *, title: str = "台股60K盤中提醒", priority: str = "4") -> bool:
+    if not (cfg.enable_ntfy_intraday_alerts and cfg.ntfy_topic):
+        return False
+    url = f"{cfg.ntfy_server.rstrip('/')}/{parse.quote(cfg.ntfy_topic.strip())}"
+    headers = {
+        "Title": title,
+        "Priority": priority,
+        "Tags": "chart_with_upwards_trend",
+    }
+    try:
+        requests.post(url, data=message.encode("utf-8"), headers=headers, timeout=15).raise_for_status()
+        print(f"[ntfy] sent to topic {cfg.ntfy_topic}")
+        return True
+    except Exception as exc:
+        print(f"[ntfy-warn] send failed: {exc}", file=sys.stderr)
+        return False
+
+
+def format_intraday_ntfy_message(results: dict[str, list[dict[str, Any]]], market: dict[str, Any]) -> str:
+    rows = []
+    for key in ("precision_entry", "extreme_daytrade"):
+        for item in results.get(key, []):
+            rows.append(
+                (
+                    key,
+                    str(item.get("stock_id", "")),
+                    str(item.get("stock_name", "")),
+                    float(item.get("last_close") or 0),
+                    float(item.get("stop_loss") or 0),
+                    int(item.get("short_score") or 0),
+                    str(item.get("subtype", "")),
+                )
+            )
+    if not rows:
+        return ""
+    label = {"precision_entry": "第四類翻紅", "extreme_daytrade": "第五類當沖"}
+    lines = [
+        "台股60K盤中提醒",
+        f"大盤：{market.get('symbol')} 日{format_number(market.get('daily_pct'))}% / 盤中{format_number(market.get('intraday_pct'))}%",
+    ]
+    for key, stock_id, stock_name, close, stop, score, subtype in rows[:8]:
+        score_text = f" 分數{score}" if key != "extreme_daytrade" and score else ""
+        lines.append(
+            f"{label.get(key, key)}｜{stock_id} {stock_name}｜收{close:.2f}｜防守{stop:.2f}{score_text}｜{subtype}"
+        )
+    lines.append("僅供盤中觀察，仍需看委買賣、量能與大盤，不追高。")
+    return "\n".join(lines)
+
+
 def html_from_body(body: str) -> str:
     _, _, html = body.partition("\n\nHTML_TABLE:\n")
     return html
@@ -2636,6 +2890,8 @@ def run(cfg: Config) -> dict[str, list[dict[str, Any]]]:
         active_keys = ["precision_entry"]
     elif cfg.only_prepare_turn:
         active_keys = ["prepare_turn"]
+    elif cfg.intraday_alert_only:
+        active_keys = ["precision_entry", "extreme_daytrade"]
     else:
         active_keys = list(CATEGORY_TITLES)
     results: dict[str, list[dict[str, Any]]] = {key: [] for key in active_keys}
@@ -2769,6 +3025,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-notify", action="store_true", help="Print result only")
     parser.add_argument("--only-short-entry", action="store_true", help="Run only category 4")
     parser.add_argument("--only-prepare-turn", action="store_true", help="Run only category 3")
+    parser.add_argument("--intraday-ntfy", action="store_true", help="Run category 4/5 intraday alert mode and push ntfy only")
     parser.add_argument("--report-date", default=None, help="Use data up to YYYY-MM-DD for review/backtest")
     parser.add_argument(
         "--skip-if-sent",
@@ -2796,8 +3053,23 @@ def main() -> int:
         cfg = dataclasses.replace(cfg, only_short_entry=True)
     if args.only_prepare_turn:
         cfg = dataclasses.replace(cfg, only_prepare_turn=True)
+    if args.intraday_ntfy:
+        cfg = dataclasses.replace(cfg, intraday_alert_only=True)
     if args.report_date:
         cfg = dataclasses.replace(cfg, report_date=args.report_date)
+
+    if args.intraday_ntfy:
+        market = market_state(cfg)
+        if not market.get("ok"):
+            print(f"[market-skip] {market.get('reason')}")
+            return 0
+        results = run(cfg)
+        message = format_intraday_ntfy_message(results, market)
+        if message:
+            send_ntfy(message, cfg)
+        else:
+            print("[ntfy] No category 4/5 intraday candidates.")
+        return 0
 
     if args.skip_if_sent and already_sent_today(cfg):
         print(f"[skip] Formal report already sent for {cfg_date(cfg)}.")
