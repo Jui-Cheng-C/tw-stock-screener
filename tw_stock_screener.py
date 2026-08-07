@@ -2751,7 +2751,11 @@ def market_state(cfg: Config) -> dict[str, Any]:
 
 
 def send_ntfy(message: str, cfg: Config, *, title: str = "TW Stock 60K Alert", priority: str = "4") -> bool:
-    if not (cfg.enable_ntfy_intraday_alerts and cfg.ntfy_topic):
+    if not cfg.enable_ntfy_intraday_alerts:
+        print("[ntfy] disabled by ENABLE_NTFY_INTRADAY_ALERTS")
+        return False
+    if not cfg.ntfy_topic:
+        print("[ntfy] disabled or missing topic: NTFY_TOPIC is empty")
         return False
     payload = {
         "topic": cfg.ntfy_topic.strip(),
@@ -2762,7 +2766,7 @@ def send_ntfy(message: str, cfg: Config, *, title: str = "TW Stock 60K Alert", p
     }
     try:
         requests.post(cfg.ntfy_server.rstrip("/"), json=payload, timeout=15).raise_for_status()
-        print(f"[ntfy] sent to topic {cfg.ntfy_topic}")
+        print(f"[ntfy] sent to topic {cfg.ntfy_topic[:4]}***")
         return True
     except Exception as exc:
         print(f"[ntfy-warn] send failed: {exc}", file=sys.stderr)
