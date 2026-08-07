@@ -2757,16 +2757,21 @@ def send_ntfy(message: str, cfg: Config, *, title: str = "TW Stock 60K Alert", p
     if not cfg.ntfy_topic:
         print("[ntfy] disabled or missing topic: NTFY_TOPIC is empty")
         return False
-    payload = {
-        "topic": cfg.ntfy_topic.strip(),
-        "title": title,
-        "message": message,
-        "priority": priority,
-        "tags": ["chart_with_upwards_trend"],
+    topic = cfg.ntfy_topic.strip().strip("/")
+    url = f"{cfg.ntfy_server.rstrip('/')}/{topic}"
+    headers = {
+        "Title": title.encode("ascii", errors="ignore").decode("ascii") or "TW Stock Alert",
+        "Priority": str(priority),
+        "Tags": "chart_with_upwards_trend",
     }
     try:
-        requests.post(cfg.ntfy_server.rstrip("/"), json=payload, timeout=15).raise_for_status()
-        print(f"[ntfy] sent to topic {cfg.ntfy_topic[:4]}***")
+        requests.post(
+            url,
+            data=message.encode("utf-8"),
+            headers=headers,
+            timeout=15,
+        ).raise_for_status()
+        print(f"[ntfy] sent to topic {topic[:4]}***")
         return True
     except Exception as exc:
         print(f"[ntfy-warn] send failed: {exc}", file=sys.stderr)
