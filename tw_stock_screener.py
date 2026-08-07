@@ -132,7 +132,7 @@ class Config:
         default_factory=lambda: env_float("MIN_TURNOVER", 100_000_000.0)
     )
     daytrade_min_volume_shares: int = dataclasses.field(
-        default_factory=lambda: env_int("DAYTRADE_MIN_VOLUME_SHARES", 800000)
+        default_factory=lambda: env_int("DAYTRADE_MIN_VOLUME_SHARES", 500000)
     )
     daytrade_min_turnover: float = dataclasses.field(
         default_factory=lambda: env_float("DAYTRADE_MIN_TURNOVER", 50_000_000.0)
@@ -312,6 +312,21 @@ def get_yahoo_intraday(
         out = normalize_yahoo_history(raw)
         if not out.empty:
             print(f"[60k] {symbol} fallback to yahoo native 60m")
+    return filter_by_report_date(out, cfg) if cfg else out
+
+
+def get_yahoo_5m_intraday(
+    stock_id: str,
+    market_type: str | None = None,
+    cfg: Config | None = None,
+) -> pd.DataFrame:
+    symbol = yahoo_symbol(stock_id, market_type)
+    raw = yf.Ticker(symbol).history(
+        period="5d",
+        interval="5m",
+        auto_adjust=False,
+    )
+    out = normalize_yahoo_history(raw)
     return filter_by_report_date(out, cfg) if cfg else out
 
 
@@ -778,6 +793,182 @@ def daily_prepare_turn_gate_ok(daily: pd.DataFrame) -> tuple[bool, dict[str, Any
 def weekly_macd_above_zero_from_daily(daily: pd.DataFrame) -> bool:
     weekly = resample_ohlcv(daily, "W-FRI")
     return macd_above_zero_ok(weekly)
+
+
+def daily_ma_cluster_breakout_info(daily: pd.DataFrame) -> dict[str, Any]:
+    info = {
+        "ma_cluster_tight": False,
+        "ma_cluster_breakout_2pct": False,
+        "ma_cluster_width_pct": None,
+        "ma_cluster_breakout_pct": None,
+    }
+    if len(daily) < 25:
+        return info
+    ind = add_indicators(daily)
+    latest = ind.iloc[-1]
+    required = ["close", "ma5", "ma10", "ma20"]
+    if latest[required].isna().any():
+        return info
+    close = float(latest["close"])
+    mas = [float(latest["ma5"]), float(latest["ma10"]), float(latest["ma20"])]
+    ma_low = min(mas)
+    ma_high = max(mas)
+    if ma_low <= 0:
+        return info
+    cluster_width = (ma_high - ma_low) / ma_low * 100
+    breakout_pct = (close / ma_high - 1) * 100 if ma_high > 0 else 0
+    info.update(
+        {
+            "ma_cluster_tight": cluster_width <= 3.0,
+            "ma_cluster_breakout_2pct": cluster_width <= 3.0 and close >= ma_high * 1.02,
+            "ma_cluster_width_pct": round(cluster_width, 2),
+            "ma_cluster_breakout_pct": round(breakout_pct, 2),
+        }
+    )
+    return info
+
+
+def daily_daytrade_protection_ok(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
+    info: dict[str, Any] = {}
+    if len(daily) < 65:
+        return False, info
+    ind = add_indicators(daily)
+    latest = ind.iloc[-1]
+    previous = ind.iloc[-2]
+    required = ["close", "ma5", "ma10", "dif", "macd"]
+    if latest[required].isna().any() or pd.isna(previous["close"]) or pd.isna(previous["ma5"]):
+        return False, info
+    close = float(latest["close"])
+    ma5 = float(latest["ma5"])
+    ma10 = float(latest["ma10"]) if not pd.isna(latest["ma10"]) else 0.0
+    dif = float(latest["dif"])
+    macd = float(latest["macd"])
+    above_ma5 = close > ma5
+    reclaimed_ma5 = close > ma5 and float(previous["close"]) <= float(previous["ma5"])
+    above_ma10 = ma10 > 0 and close > ma10
+    macd_above_zero = dif > 0 and macd > 0
+    ma_cluster = daily_ma_cluster_breakout_info(daily)
+    info.update(
+        {
+            "above_daily_ma5": above_ma5,
+            "reclaimed_daily_ma5": reclaimed_ma5,
+            "above_daily_ma10": above_ma10,
+            "daily_macd_above_zero": macd_above_zero,
+            **ma_cluster,
+        }
+    )
+    return bool((above_ma5 or reclaimed_ma5) and macd_above_zero), info
+
+
+def intraday_60k_daytrade_direction_ok(kbar: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
+    ok, _reason, priority, info = intraday_prepare_turn_signal(kbar)
+    if ok:
+        info["direction_priority"] = priority
+        return True, info
+    if kbar.empty:
+        return False, info
+    ind = add_indicators(kbar)
+    tail = ind.tail(5)
+    required = ["close", "ma5", "ma10", "dif", "macd", "hist"]
+    if len(tail) < 5 or tail[required].isna().any().any():
+        return False, info
+    latest = tail.iloc[-1]
+    dif = tail["dif"].astype(float).tolist()
+    hist = tail["hist"].astype(float).tolist()
+    close = float(latest["close"])
+    ma5 = float(latest["ma5"])
+    ma10 = float(latest["ma10"])
+    hist_contracting = hist[-4] < hist[-3] < hist[-2] < hist[-1]
+    dif_turning_up = dif[-1] > dif[-2] > dif[-3]
+    above_ma5_or_ma10 = close > ma5 or close > ma10
+    above_zero = float(latest["dif"]) > 0 and float(latest["macd"]) > 0
+    info.update(
+        {
+            "hist_contracting": hist_contracting,
+            "dif_turning_up": dif_turning_up,
+            "above_60m_ma5_or_ma10": above_ma5_or_ma10,
+            "above_60m_zero": above_zero,
+            "direction_priority": int(above_zero) + int(above_ma5_or_ma10) + int(hist_contracting or dif_turning_up),
+        }
+    )
+    return bool(above_ma5_or_ma10 and (hist_contracting or dif_turning_up or above_zero)), info
+
+
+def intraday_5k_daytrade_signal(five_min: pd.DataFrame) -> tuple[bool, str, int, dict[str, Any]]:
+    info: dict[str, Any] = {}
+    if five_min.empty:
+        return False, "", 0, info
+    df = five_min.copy()
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    for col in ("open", "max", "min", "close", "Trading_Volume"):
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    df = df.dropna(subset=["date", "open", "max", "min", "close"]).sort_values("date")
+    report_day = df["date"].dropna().max().date()
+    today = df[df["date"].dt.date == report_day].copy()
+    today = today[(today["date"].dt.time >= dt.time(9, 5)) & (today["date"].dt.time <= dt.time(13, 30))]
+    if len(today) < 2:
+        return False, "", 0, info
+    ind = add_indicators(df)
+    today_ind = ind[ind["date"].dt.date == report_day].copy()
+    today_ind = today_ind[(today_ind["date"].dt.time >= dt.time(9, 5)) & (today_ind["date"].dt.time <= dt.time(13, 30))]
+    if len(today_ind) < 2:
+        return False, "", 0, info
+    latest = today_ind.iloc[-1]
+    recent = today_ind.tail(3)
+    required = ["close", "open", "max", "min", "dif", "macd", "hist", "Trading_Volume"]
+    if recent[required].isna().any().any():
+        return False, "", 0, info
+    ema5 = ind["close"].astype(float).ewm(span=5, adjust=False).mean().loc[latest.name]
+    hist = recent["hist"].astype(float).tolist()
+    dif = recent["dif"].astype(float).tolist()
+    macd = recent["macd"].astype(float).tolist()
+    close = float(latest["close"])
+    open_price = float(latest["open"])
+    high = float(latest["max"])
+    low_today = float(today_ind["min"].min())
+    volume_today = float(today_ind["Trading_Volume"].sum())
+    turnover_today = float((today_ind["Trading_Volume"].astype(float) * today_ind["close"].astype(float)).sum())
+    stands_above_ema5 = close > float(ema5)
+    hist_contracting_2 = len(hist) >= 3 and hist[-3] < hist[-2] < hist[-1] and hist[-1] <= 0
+    hist_turn_red = len(hist) >= 2 and hist[-2] <= 0 < hist[-1]
+    golden_cross = len(dif) >= 2 and dif[-2] <= macd[-2] and dif[-1] > macd[-1]
+    dif_turning_up = len(dif) >= 3 and dif[-1] > dif[-2] > dif[-3]
+    red_body = close > open_price
+    close_near_high = high > 0 and (high - close) / high <= 0.018
+    stop_risk_pct = (close - low_today) / close * 100 if close > 0 and low_today > 0 else 999
+    info.update(
+        {
+            "5k_above_ema5": stands_above_ema5,
+            "5k_hist_contracting_2": hist_contracting_2,
+            "5k_hist_turn_red": hist_turn_red,
+            "5k_golden_cross": golden_cross,
+            "5k_dif_turning_up": dif_turning_up,
+            "5k_red_body": red_body,
+            "5k_close_near_high": close_near_high,
+            "intraday_volume_shares": int(volume_today),
+            "intraday_turnover": int(turnover_today),
+            "open_low_stop": round(low_today, 2),
+            "open_low_stop_risk_pct": round(stop_risk_pct, 2),
+        }
+    )
+    momentum = hist_contracting_2 or hist_turn_red or golden_cross or dif_turning_up
+    if not (stands_above_ema5 and momentum and red_body and stop_risk_pct <= 3.0):
+        return False, "", 0, info
+    priority = 1
+    if hist_turn_red or golden_cross:
+        priority += 2
+    if hist_contracting_2:
+        priority += 1
+    if close_near_high:
+        priority += 1
+    if stop_risk_pct <= 2.5:
+        priority += 1
+    reason = "5K站上5EMA且MACD綠柱收斂"
+    if hist_turn_red:
+        reason = "5K站上5EMA且MACD翻紅"
+    if golden_cross:
+        reason = "5K站上5EMA且DIF黃金交叉"
+    return True, reason, priority, info
 
 
 def intraday_prepare_turn_signal(kbar: pd.DataFrame) -> tuple[bool, str, int, dict[str, Any]]:
@@ -1582,6 +1773,11 @@ def score_short_candidate(item: dict[str, Any]) -> dict[str, Any]:
     if item.get("breakout_ok"):
         score += 8
         reasons.append("整理後再突破")
+    ma_cluster_info = item.get("daily_ma_cluster_info") or {}
+    if ma_cluster_info.get("ma_cluster_breakout_2pct"):
+        bonus = 10 if "relay_breakout" in category_keys or "precision_entry" in category_keys else 8
+        score += bonus
+        reasons.append("日K均線糾結突破2%")
 
     daily_pct = float(item.get("daily_pct") or 0)
     gain_3d = float(item.get("gain_3d_pct") or 0)
@@ -1624,6 +1820,7 @@ def build_top_reason(item: dict[str, Any]) -> str:
         "周K在0軸上",
         "同時符合多類訊號",
         "整理後再突破",
+        "日K均線糾結突破2%",
         "投信連買",
         "投信認養比重高",
         "投信認養比重提高",
@@ -1806,6 +2003,8 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         daily_macd_ok = daily_common_gate(daily)
         daily_trend_ok, daily_trend_info = daily_trend_protection_ok(daily)
         daily_prepare_ok, daily_prepare_info = daily_prepare_turn_gate_ok(daily)
+        daily_daytrade_ok, daily_daytrade_info = daily_daytrade_protection_ok(daily)
+        daily_ma_cluster_info = daily_ma_cluster_breakout_info(daily)
         weekly_macd_ok = weekly_macd_above_zero_from_daily(daily)
 
         stop = calculate_stop_loss(daily, cfg)
@@ -1840,6 +2039,12 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         extreme_daytrade_reason = ""
         extreme_daytrade_priority = 0
         extreme_daytrade_info: dict[str, Any] = {}
+        daytrade_direction_ok = False
+        daytrade_direction_info: dict[str, Any] = {}
+        five_k_ok = False
+        five_k_reason = ""
+        five_k_priority = 0
+        five_k_info: dict[str, Any] = {}
         if cfg.enable_intraday_check:
             intraday = get_yahoo_intraday(stock_id, market_type, cfg)
             if intraday_session_is_current(intraday, cfg):
@@ -1856,11 +2061,41 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
                     extreme_daytrade_priority,
                     extreme_daytrade_info,
                 ) = intraday_extreme_daytrade_signal(intraday)
+                daytrade_direction_ok, daytrade_direction_info = intraday_60k_daytrade_direction_ok(
+                    intraday
+                )
+                five_min = get_yahoo_5m_intraday(stock_id, market_type, cfg)
+                five_k_ok, five_k_reason, five_k_priority, five_k_info = intraday_5k_daytrade_signal(
+                    five_min
+                )
+                intraday_volume_ok = (
+                    int(five_k_info.get("intraday_volume_shares") or 0)
+                    >= cfg.daytrade_min_volume_shares
+                )
+                extreme_daytrade_ok = bool(
+                    daily_daytrade_ok
+                    and daytrade_direction_ok
+                    and five_k_ok
+                    and intraday_volume_ok
+                )
+                extreme_daytrade_reason = five_k_reason
+                extreme_daytrade_priority = (
+                    five_k_priority
+                    + int(daytrade_direction_info.get("direction_priority") or 0)
+                    + (2 if daily_daytrade_info.get("ma_cluster_breakout_2pct") else 0)
+                )
+                extreme_daytrade_info = {
+                    **extreme_daytrade_info,
+                    **daytrade_direction_info,
+                    **five_k_info,
+                    **daily_daytrade_info,
+                    "intraday_volume_ok": intraday_volume_ok,
+                }
 
         daytrade_ok, daytrade_reasons = daytrade_filter_ok(row, cfg, stop)
         normal_signal_possible = daily_macd_ok or reclaim_ok or daily_trend_ok or daily_prepare_ok
         normal_filter_possible = filter_ok or relay_filter_ok or precision_filter_ok
-        if not ((normal_signal_possible and normal_filter_possible) or (extreme_daytrade_ok and daytrade_ok)):
+        if not ((normal_signal_possible and normal_filter_possible) or extreme_daytrade_ok):
             return {}
 
         foreign_net = 0
@@ -1918,6 +2153,9 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
             "daily_trend_info": daily_trend_info,
             "daily_prepare_ok": daily_prepare_ok,
             "daily_prepare_info": daily_prepare_info,
+            "daily_daytrade_ok": daily_daytrade_ok,
+            "daily_daytrade_info": daily_daytrade_info,
+            "daily_ma_cluster_info": daily_ma_cluster_info,
             "weekly_macd_ok": weekly_macd_ok,
             "daily_macd_ok": daily_macd_ok,
             "kd_pullback_ok": kd_pullback_ok,
@@ -1987,11 +2225,15 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
                 "category": "60K精準翻紅股",
                 "subtype": short_entry_reason,
             }
-        if extreme_daytrade_ok and daytrade_ok:
+        if extreme_daytrade_ok:
             categories["extreme_daytrade"] = {
                 **base,
-                "category": "60K極限當沖股",
+                "category": "5K早盤當沖雷達股",
                 "subtype": extreme_daytrade_reason,
+                "stop_loss": extreme_daytrade_info.get("open_low_stop") or base["stop_loss"],
+                "stop_loss_risk_pct": extreme_daytrade_info.get("open_low_stop_risk_pct")
+                or base["stop_loss_risk_pct"],
+                "stop_loss_method": "今日開盤低點",
             }
         return categories
     except Exception as exc:
@@ -2064,7 +2306,7 @@ CATEGORY_TITLES = {
     "relay_breakout": "第二類：中繼再漲股（平台突破型）",
     "prepare_turn": "第三類：60K起漲雷達股（提前觀察型）",
     "precision_entry": "第四類：60K精準翻紅股",
-    "extreme_daytrade": "第五類：60K極限當沖股（高波動短打型）",
+    "extreme_daytrade": "第五類：5K早盤當沖雷達股（當沖／隔日沖）",
 }
 
 LIMITED_CATEGORY_COUNTS = {
@@ -2877,11 +3119,11 @@ def format_intraday_ntfy_message(results: dict[str, list[dict[str, Any]]], marke
         lines = [
             "台股60K盤中檢查完成",
             f"大盤：{market.get('symbol')} 日{format_number(market.get('daily_pct'))}% / 盤中{format_number(market.get('intraday_pct'))}%",
-            "本次第四類（60K精準翻紅）與第五類（60K極限當沖）沒有符合標的。",
+            "本次第四類（60K精準翻紅）與第五類（5K早盤當沖雷達）沒有符合標的。",
             "這代表程式有正常執行，只是條件未觸發。",
         ]
         return "\n".join(lines)
-    label = {"precision_entry": "第四類翻紅", "extreme_daytrade": "第五類當沖"}
+    label = {"precision_entry": "第四類60K翻紅", "extreme_daytrade": "第五類5K當沖"}
     lines = [
         "台股60K盤中提醒",
         f"大盤：{market.get('symbol')} 日{format_number(market.get('daily_pct'))}% / 盤中{format_number(market.get('intraday_pct'))}%",
@@ -3043,9 +3285,11 @@ def finalize_results(results: dict[str, list[dict[str, Any]]]) -> None:
             row["category_names"] = [row.get("category", "")]
             if key == "extreme_daytrade":
                 row["short_score"] = 0
-                row["score_reasons"] = ["60K極限當沖訊號"]
+                row["score_reasons"] = ["5K早盤當沖訊號"]
                 row["score_warnings"] = ["當沖股不列入短線精選排名"]
-                row["top_reason"] = "60K修正後連三根收復5/10MA，適合獨立觀察當沖節奏。"
+                row["top_reason"] = (
+                    "日K守多方、60K方向轉強，5K站上5EMA並出現MACD早盤觸發。"
+                )
             else:
                 score_short_candidate(row)
 
@@ -3056,6 +3300,7 @@ def finalize_results(results: dict[str, list[dict[str, Any]]]) -> None:
             rows.sort(
                 key=lambda item: (
                     int(item.get("extreme_daytrade_priority") or 0),
+                    int((item.get("extreme_daytrade_info") or {}).get("intraday_volume_shares") or 0),
                     float(item.get("turnover") or 0),
                     int(item.get("volume_lots") or 0),
                 ),
@@ -3171,7 +3416,13 @@ def main() -> int:
         results = run(cfg)
         message = format_intraday_ntfy_message(results, market)
         if message:
-            send_ntfy(message, cfg)
+            has_daytrade = bool(results.get("extreme_daytrade"))
+            send_ntfy(
+                message,
+                cfg,
+                title="TW Stock 5K Daytrade Alert" if has_daytrade else "TW Stock 60K Alert",
+                priority="5" if has_daytrade else "4",
+            )
         else:
             print("[ntfy] No category 4/5 intraday candidates.")
         return 0
