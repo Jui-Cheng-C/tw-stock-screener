@@ -2750,17 +2750,18 @@ def market_state(cfg: Config) -> dict[str, Any]:
     return state
 
 
-def send_ntfy(message: str, cfg: Config, *, title: str = "台股60K盤中提醒", priority: str = "4") -> bool:
+def send_ntfy(message: str, cfg: Config, *, title: str = "TW Stock 60K Alert", priority: str = "4") -> bool:
     if not (cfg.enable_ntfy_intraday_alerts and cfg.ntfy_topic):
         return False
-    url = f"{cfg.ntfy_server.rstrip('/')}/{parse.quote(cfg.ntfy_topic.strip())}"
-    headers = {
-        "Title": title,
-        "Priority": priority,
-        "Tags": "chart_with_upwards_trend",
+    payload = {
+        "topic": cfg.ntfy_topic.strip(),
+        "title": title,
+        "message": message,
+        "priority": priority,
+        "tags": ["chart_with_upwards_trend"],
     }
     try:
-        requests.post(url, data=message.encode("utf-8"), headers=headers, timeout=15).raise_for_status()
+        requests.post(cfg.ntfy_server.rstrip("/"), json=payload, timeout=15).raise_for_status()
         print(f"[ntfy] sent to topic {cfg.ntfy_topic}")
         return True
     except Exception as exc:
@@ -2784,7 +2785,13 @@ def format_intraday_ntfy_message(results: dict[str, list[dict[str, Any]]], marke
                 )
             )
     if not rows:
-        return ""
+        lines = [
+            "台股60K盤中檢查完成",
+            f"大盤：{market.get('symbol')} 日{format_number(market.get('daily_pct'))}% / 盤中{format_number(market.get('intraday_pct'))}%",
+            "本次第四類（60K精準翻紅）與第五類（60K極限當沖）沒有符合標的。",
+            "這代表程式有正常執行，只是條件未觸發。",
+        ]
+        return "\n".join(lines)
     label = {"precision_entry": "第四類翻紅", "extreme_daytrade": "第五類當沖"}
     lines = [
         "台股60K盤中提醒",
@@ -3061,7 +3068,16 @@ def main() -> int:
     if args.intraday_ntfy:
         market = market_state(cfg)
         if not market.get("ok"):
-            print(f"[market-skip] {market.get('reason')}")
+            reason = str(market.get("reason") or "大盤狀態未通過")
+            print(f"[market-skip] {reason}")
+            send_ntfy(
+                "台股60K盤中檢查暫停\n"
+                f"原因：{reason}\n"
+                "本次不發第四類/第五類進場訊號，避免逆勢硬做。",
+                cfg,
+                title="TW Stock 60K Market Skip",
+                priority="3",
+            )
             return 0
         results = run(cfg)
         message = format_intraday_ntfy_message(results, market)
