@@ -292,13 +292,92 @@ def get_yahoo_intraday(
     cfg: Config | None = None,
 ) -> pd.DataFrame:
     symbol = yahoo_symbol(stock_id, market_type)
-    raw = yf.Ticker(symbol).history(
-        period="60d",
-        interval="60m",
-        auto_adjust=False,
-    )
-    out = normalize_yahoo_history(raw)
+    out = pd.DataFrame()
+    try:
+        raw_5m = yf.Ticker(symbol).history(
+            period="60d",
+            interval="5m",
+            auto_adjust=False,
+        )
+        five_min = normalize_yahoo_history(raw_5m)
+        out = rebuild_taiwan_60k_from_5m(five_min)
+    except Exception as exc:
+        print(f"[60k] {symbol} failed to rebuild from 5m: {exc}")
+    if out.empty:
+        raw = yf.Ticker(symbol).history(
+            period="60d",
+            interval="60m",
+            auto_adjust=False,
+        )
+        out = normalize_yahoo_history(raw)
+        if not out.empty:
+            print(f"[60k] {symbol} fallback to yahoo native 60m")
     return filter_by_report_date(out, cfg) if cfg else out
+
+
+def taiwan_60k_slot(ts: pd.Timestamp) -> pd.Timestamp | None:
+    t = ts.time()
+    if t < dt.time(9, 0) or t > dt.time(13, 30):
+        return None
+    day = ts.normalize()
+    if t < dt.time(10, 0):
+        return day + pd.Timedelta(hours=9)
+    if t < dt.time(11, 0):
+        return day + pd.Timedelta(hours=10)
+    if t < dt.time(12, 0):
+        return day + pd.Timedelta(hours=11)
+    if t < dt.time(13, 0):
+        return day + pd.Timedelta(hours=12)
+    return day + pd.Timedelta(hours=13)
+
+
+def rebuild_taiwan_60k_from_5m(five_min: pd.DataFrame) -> pd.DataFrame:
+    if five_min.empty or "date" not in five_min.columns:
+        return pd.DataFrame()
+    df = five_min.copy()
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    for col in ("open", "max", "min", "close", "Trading_Volume"):
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    df = df.dropna(subset=["date", "open", "max", "min", "close"])
+    if df.empty:
+        return pd.DataFrame()
+    df["slot"] = df["date"].map(taiwan_60k_slot)
+    df = df.dropna(subset=["slot"]).sort_values("date")
+    if df.empty:
+        return pd.DataFrame()
+    hourly = (
+        df.groupby("slot", sort=True)
+        .agg(
+            {
+                "open": "first",
+                "max": "max",
+                "min": "min",
+                "close": "last",
+                "Trading_Volume": "sum",
+            }
+        )
+        .reset_index()
+        .rename(columns={"slot": "date"})
+    )
+    return hourly.sort_values("date").dropna(subset=["close"])
+
+
+def expected_taiwan_60k_bars_for_now(report_day: dt.date) -> int:
+    today = dt.date.today()
+    if report_day != today:
+        return 5
+    now = dt.datetime.now().time()
+    if now < dt.time(9, 0):
+        return 0
+    if now < dt.time(10, 0):
+        return 1
+    if now < dt.time(11, 0):
+        return 2
+    if now < dt.time(12, 0):
+        return 3
+    if now < dt.time(13, 0):
+        return 4
+    return 5
 
 
 def intraday_session_is_current(kbar: pd.DataFrame, cfg: Config, min_bars: int = 4) -> bool:
@@ -312,7 +391,8 @@ def intraday_session_is_current(kbar: pd.DataFrame, cfg: Config, min_bars: int =
     if last_date != report_day:
         return False
     today_bars = kbar[dates.dt.date == report_day]
-    return len(today_bars) >= min_bars
+    required_bars = min(min_bars, expected_taiwan_60k_bars_for_now(report_day))
+    return len(today_bars) >= max(1, required_bars)
 
 
 def add_indicators(df: pd.DataFrame, atr_period: int = 14) -> pd.DataFrame:
