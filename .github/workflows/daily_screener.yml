@@ -3,8 +3,9 @@ name: Daily Taiwan Stock Screener
 on:
   schedule:
     # Dedicated intraday ntfy checks for category 4/5.
-    # 09:16/10:16 Asia/Taipei = 01:16/02:16 UTC.
-    - cron: "16 1,2 * * 1-5"
+    # 09:16/09:46/10:16 Asia/Taipei = 01:16/01:46/02:16 UTC.
+    - cron: "16,46 1 * * 1-5"
+    - cron: "16 2 * * 1-5"
     # Taiwan 19:00 target delivery window.
     # GitHub scheduled runs can be delayed or occasionally skipped, so use several
     # insurance slots around 19:00. The script uses --skip-if-sent to prevent
@@ -28,7 +29,7 @@ concurrency:
 
 jobs:
   intraday-ntfy:
-    if: github.event_name == 'schedule' && github.event.schedule == '16 1,2 * * 1-5'
+    if: github.event_name == 'schedule' && (github.event.schedule == '16,46 1 * * 1-5' || github.event.schedule == '16 2 * * 1-5')
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -56,7 +57,7 @@ jobs:
         run: python tw_stock_screener.py --intraday-ntfy
 
   run-screener:
-    if: github.event_name != 'schedule' || github.event.schedule != '16 1,2 * * 1-5'
+    if: github.event_name != 'schedule' || (github.event.schedule != '16,46 1 * * 1-5' && github.event.schedule != '16 2 * * 1-5')
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
