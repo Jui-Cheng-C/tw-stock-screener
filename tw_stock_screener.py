@@ -2137,6 +2137,7 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         base = {
             "stock_id": stock_id,
             "stock_name": stock_name,
+            "industry_category": str(row.get("industry_category", "") or ""),
             "market_type": market_type,
             "last_close": stop["last_close"],
             "stop_loss": stop["stop_loss"],
@@ -2282,6 +2283,7 @@ def screen_short_entry_only(
     item = {
         "stock_id": stock_id,
         "stock_name": stock_name,
+        "industry_category": str(row.get("industry_category", "") or ""),
         "market_type": market_type,
         "last_close": stop["last_close"],
         "stop_loss": stop["stop_loss"],
@@ -2929,6 +2931,46 @@ def format_top_reason_section(rows: list[dict[str, Any]]) -> tuple[str, str]:
     return text, html
 
 
+def industry_topic_text(row: dict[str, Any]) -> str:
+    industry = str(row.get("industry_category", "") or "").strip()
+    if not industry:
+        return "未分類"
+    return industry.replace("　", " ").replace("業", "")
+
+
+def trend_direction_text(row: dict[str, Any]) -> str:
+    category = str(row.get("category", "") or "")
+    parts: list[str] = []
+    if category == "均線收復轉強股":
+        if row.get("reclaim_ok"):
+            parts.append("日K收復短均")
+        else:
+            parts.append("日K回檔支撐")
+        if row.get("kd_pullback_ok"):
+            parts.append("60K低檔轉強")
+    elif category == "中繼再漲股":
+        parts.extend(["日K平台突破", "量價轉強"])
+    elif category == "60K起漲雷達股":
+        parts.extend(["日K保護", "60K起漲觀察"])
+    elif category == "60K精準翻紅股":
+        parts.extend(["日K多方", "60K翻紅"])
+    elif category == "5K早盤當沖雷達股":
+        parts.extend(["日K多方", "5K觸發"])
+    else:
+        subtype = str(row.get("subtype", "") or "").strip()
+        if subtype:
+            parts.append(subtype)
+
+    if row.get("weekly_macd_ok") and category != "5K早盤當沖雷達股":
+        parts.append("周K順風")
+    if (row.get("daily_ma_cluster_info") or {}).get("ma_cluster_breakout_2pct"):
+        parts.append("均線糾結突破")
+
+    if not parts:
+        return "趨勢待觀察"
+    return "，".join(dict.fromkeys(parts))
+
+
 def report_display_dataframe(rows: list[dict[str, Any]]) -> pd.DataFrame:
     clean_rows = []
     for row in rows:
@@ -2938,12 +2980,22 @@ def report_display_dataframe(rows: list[dict[str, Any]]) -> pd.DataFrame:
                 "股名": str(row.get("stock_name", "")),
                 "今日收盤價": format_number(row.get("last_close")),
                 "今日成交量(張)": format_integer(row.get("volume_lots")),
-                "建議停損價(防守線)": format_number(row.get("stop_loss")),
+                "建議停損價": format_number(row.get("stop_loss")),
+                "產業/題材": industry_topic_text(row),
+                "趨勢方向": trend_direction_text(row),
             }
         )
     return pd.DataFrame(
         clean_rows,
-        columns=["股票代號", "股名", "今日收盤價", "今日成交量(張)", "建議停損價(防守線)"],
+        columns=[
+            "股票代號",
+            "股名",
+            "今日收盤價",
+            "今日成交量(張)",
+            "建議停損價",
+            "產業/題材",
+            "趨勢方向",
+        ],
     ).reset_index(drop=True)
 
 
@@ -2959,7 +3011,9 @@ def shortlist_dataframe(rows: list[dict[str, Any]]) -> pd.DataFrame:
                 "短線分數": format_integer(row.get("short_score")),
                 "今日收盤價": format_number(row.get("last_close")),
                 "今日成交量(張)": format_integer(row.get("volume_lots")),
-                "建議停損價(防守線)": format_number(row.get("stop_loss")),
+                "建議停損價": format_number(row.get("stop_loss")),
+                "產業/題材": industry_topic_text(row),
+                "趨勢方向": trend_direction_text(row),
             }
         )
     return pd.DataFrame(
@@ -2972,7 +3026,9 @@ def shortlist_dataframe(rows: list[dict[str, Any]]) -> pd.DataFrame:
             "短線分數",
             "今日收盤價",
             "今日成交量(張)",
-            "建議停損價(防守線)",
+            "建議停損價",
+            "產業/題材",
+            "趨勢方向",
         ],
     )
 
@@ -2985,10 +3041,20 @@ def empty_report_dataframe() -> pd.DataFrame:
                 "股名": "",
                 "今日收盤價": "",
                 "今日成交量(張)": "",
-                "建議停損價(防守線)": "",
+                "建議停損價": "",
+                "產業/題材": "",
+                "趨勢方向": "",
             }
         ],
-        columns=["股票代號", "股名", "今日收盤價", "今日成交量(張)", "建議停損價(防守線)"],
+        columns=[
+            "股票代號",
+            "股名",
+            "今日收盤價",
+            "今日成交量(張)",
+            "建議停損價",
+            "產業/題材",
+            "趨勢方向",
+        ],
     )
 
 
