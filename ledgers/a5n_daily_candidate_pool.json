@@ -1,7 +1,7 @@
 {
   "strategy_version": "A5-N-research-default-v0.1-20260813",
   "parameter_status": "research_default",
-  "built_at": "2026-08-13T19:01:21.873088+08:00",
+  "built_at": "2026-08-13T21:07:38.859002+08:00",
   "data_cutoff_rule": "strictly before scan date (T-1)",
   "config": {
     "parameter_status": "research_default",
@@ -128,7 +128,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -141,7 +141,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -150,7 +150,9 @@
       },
       "stock_id": "8422",
       "stock_name": "可寧衛",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -244,7 +246,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -257,7 +259,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -266,7 +268,9 @@
       },
       "stock_id": "2542",
       "stock_name": "興富發",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -360,7 +364,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -373,7 +377,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -382,7 +386,9 @@
       },
       "stock_id": "9941",
       "stock_name": "裕融",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -476,7 +482,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -489,7 +495,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -498,7 +504,9 @@
       },
       "stock_id": "2002",
       "stock_name": "中鋼",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -592,7 +600,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -605,7 +613,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -614,7 +622,9 @@
       },
       "stock_id": "2609",
       "stock_name": "陽明",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -708,7 +718,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -721,7 +731,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -730,7 +740,9 @@
       },
       "stock_id": "1402",
       "stock_name": "遠東新",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -824,7 +836,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -837,7 +849,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -846,7 +858,9 @@
       },
       "stock_id": "9910",
       "stock_name": "豐泰",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -940,7 +954,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -953,7 +967,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -962,7 +976,9 @@
       },
       "stock_id": "9945",
       "stock_name": "潤泰新",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -1056,7 +1072,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -1069,7 +1085,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -1078,7 +1094,9 @@
       },
       "stock_id": "6919",
       "stock_name": "康霈*",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -1172,7 +1190,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -1185,7 +1203,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -1194,7 +1212,9 @@
       },
       "stock_id": "2615",
       "stock_name": "萬海",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -1288,7 +1308,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -1301,7 +1321,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -1310,7 +1330,9 @@
       },
       "stock_id": "3706",
       "stock_name": "神達",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -1404,7 +1426,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -1417,7 +1439,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -1426,7 +1448,9 @@
       },
       "stock_id": "2883",
       "stock_name": "凱基金",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -1520,7 +1544,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -1533,7 +1557,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -1542,7 +1566,9 @@
       },
       "stock_id": "1229",
       "stock_name": "聯華",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -1636,7 +1662,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -1649,7 +1675,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -1658,7 +1684,9 @@
       },
       "stock_id": "2890",
       "stock_name": "永豐金",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -1752,7 +1780,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -1765,7 +1793,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -1774,7 +1802,9 @@
       },
       "stock_id": "2891",
       "stock_name": "中信金",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -1868,7 +1898,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -1881,7 +1911,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -1890,7 +1920,9 @@
       },
       "stock_id": "2606",
       "stock_name": "裕民",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -1984,7 +2016,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -1997,7 +2029,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -2006,7 +2038,9 @@
       },
       "stock_id": "2603",
       "stock_name": "長榮",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -2100,7 +2134,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2113,7 +2147,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -2122,7 +2156,9 @@
       },
       "stock_id": "2637",
       "stock_name": "慧洋-KY",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -2216,7 +2252,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2229,7 +2265,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -2238,7 +2274,9 @@
       },
       "stock_id": "1504",
       "stock_name": "東元",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -2332,7 +2370,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2345,7 +2383,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -2354,7 +2392,9 @@
       },
       "stock_id": "2887",
       "stock_name": "台新新光金",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -2448,7 +2488,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2461,7 +2501,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -2470,7 +2510,9 @@
       },
       "stock_id": "8436",
       "stock_name": "大江",
-      "market_type": "tpex"
+      "market_type": "tpex",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -2564,7 +2606,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2577,7 +2619,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -2586,7 +2628,9 @@
       },
       "stock_id": "1101",
       "stock_name": "台泥",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -2680,7 +2724,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2693,7 +2737,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -2702,7 +2746,9 @@
       },
       "stock_id": "2882",
       "stock_name": "國泰金",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -2796,7 +2842,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2809,7 +2855,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -2818,7 +2864,9 @@
       },
       "stock_id": "2605",
       "stock_name": "新興",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -2912,7 +2960,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-13 19:01:21.873088",
+      "symbol_evaluated_at": "2026-08-13 21:07:38.859002",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2925,7 +2973,7 @@
       "daily_data_date": "2026-08-12 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-13 18:55:00",
+      "expected_last_completed_timestamp": "2026-08-13 21:00:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
         "date": "2026-08-13",
@@ -2934,7 +2982,9 @@
       },
       "stock_id": "1907",
       "stock_name": "永豐餘",
-      "market_type": "twse"
+      "market_type": "twse",
+      "run_id": "a573edd8-4b45-40bc-a5f4-a3d9b9393927",
+      "scan_started_at": "2026-08-13T21:07:38.859002+08:00"
     }
   ]
 }
