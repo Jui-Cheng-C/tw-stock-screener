@@ -1,4 +1,5 @@
 import unittest
+from email.header import Header
 from pathlib import Path
 
 import pandas as pd
@@ -7,6 +8,10 @@ from a5n_strategy import A5_N_CONFIG, _completed_60k, _completed_daily
 
 
 class A5NLookaheadTests(unittest.TestCase):
+    def test_ntfy_unicode_title_is_ascii_header_safe(self):
+        encoded = Header("🧪 A5-N 新策略測試", "utf-8").encode()
+        encoded.encode("latin-1")
+        self.assertIn("=?utf-8?", encoded.lower())
     def test_daily_excludes_same_day_partial_bar(self):
         frame = pd.DataFrame({
             "date": pd.to_datetime(["2026-08-12", "2026-08-13"]),

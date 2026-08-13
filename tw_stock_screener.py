@@ -4497,7 +4497,7 @@ def send_ntfy(message: str, cfg: Config, *, title: str = "TW Stock 60K Alert", p
     topic = cfg.ntfy_topic.strip().strip("/")
     url = f"{cfg.ntfy_server.rstrip('/')}/{topic}"
     headers = {
-        "Title": str(Header(title, "utf-8")),
+        "Title": Header(title, "utf-8").encode(),
         "Priority": str(priority),
         "Tags": "chart_with_upwards_trend",
     }
@@ -4986,7 +4986,7 @@ def main() -> int:
         a5n_message = format_a5n_ntfy_message(A5_N_RUN_ROWS)
         sent_at = now_taipei().isoformat()
         sent = False if args.no_notify else send_ntfy(
-            a5n_message, cfg, title="🧪 A5-N 新策略即時測試", priority="4"
+            a5n_message, cfg, title="🧪 A5-N 新策略測試", priority="4"
         )
         write_a5n_ledger(sent_at if sent else None)
         print(a5n_message)
