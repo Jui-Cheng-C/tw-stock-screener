@@ -5,9 +5,24 @@ from pathlib import Path
 import pandas as pd
 
 from a5n_strategy import A5_N_CONFIG, _completed_60k, _completed_daily
+from a5n_variant_b import A5_N_B_CONFIG
 
 
 class A5NLookaheadTests(unittest.TestCase):
+    def test_variant_b_is_independent_and_only_changes_platform_window(self):
+        self.assertEqual(A5_N_CONFIG["platform_lookback_days"], 12)
+        self.assertEqual(A5_N_CONFIG["platform_exclude_recent_days"], 2)
+        self.assertEqual(A5_N_B_CONFIG["platform_lookback_days"], 7)
+        self.assertEqual(A5_N_B_CONFIG["platform_exclude_recent_days"], 0)
+        self.assertEqual(A5_N_B_CONFIG["platform_min_days"], 6)
+        for key, value in A5_N_CONFIG.items():
+            if key not in {"parameter_status", "platform_lookback_days", "platform_exclude_recent_days", "platform_min_days"}:
+                self.assertEqual(A5_N_B_CONFIG[key], value)
+        self.assertFalse(A5_N_B_CONFIG["notification_enabled"])
+
+    def test_variant_b_zero_exclusion_keeps_seven_completed_days(self):
+        source = Path("a5n_strategy.py").read_text(encoding="utf-8")
+        self.assertIn("window_end = None if exclude == 0 else -exclude", source)
     def test_ntfy_unicode_title_is_ascii_header_safe(self):
         encoded = Header("🧪 A5-N 新策略測試", "utf-8").encode()
         encoded.encode("latin-1")

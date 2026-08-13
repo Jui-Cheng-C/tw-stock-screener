@@ -130,7 +130,8 @@ def evaluate_a5n(
     latest = di.iloc[-1]
     lookback = int(cfg["platform_lookback_days"])
     exclude = int(cfg["platform_exclude_recent_days"])
-    window = di.iloc[-(lookback + exclude):-exclude]
+    window_end = None if exclude == 0 else -exclude
+    window = di.iloc[-(lookback + exclude):window_end]
     platform_high, platform_low = _num(window["max"].max()), _num(window["min"].min())
     close = _num(latest["close"])
     near_high = (platform_high - close) / platform_high * 100 if platform_high else 999

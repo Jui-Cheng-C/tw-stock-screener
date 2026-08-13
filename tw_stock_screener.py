@@ -38,6 +38,7 @@ import requests
 import yfinance as yf
 from bs4 import BeautifulSoup
 from a5n_strategy import A5_N_CONFIG, A5_N_VERSION, a5n_rank_key, evaluate_a5n
+from a5n_variant_b import A5_N_B_CONFIG, A5_N_B_VERSION
 
 
 FINMIND_URL = "https://api.finmindtrade.com/api/v4/data"
@@ -118,6 +119,9 @@ A5_LEGACY_ENABLED = False
 A5_N_LEDGER_PATH = LEDGER_DIR / "a5n_signal_ledger.jsonl"
 A5_N_POOL_PATH = LEDGER_DIR / "a5n_daily_candidate_pool.json"
 A5_N_PREMARKET_LEDGER_PATH = LEDGER_DIR / "a5n_premarket_ledger.jsonl"
+A5_N_B_POOL_PATH = LEDGER_DIR / "a5n_b_shadow_candidate_pool.json"
+A5_N_B_PREMARKET_LEDGER_PATH = LEDGER_DIR / "a5n_b_shadow_premarket_ledger.jsonl"
+A5_N_B_SIGNAL_LEDGER_PATH = LEDGER_DIR / "a5n_b_shadow_signal_ledger.jsonl"
 A5_N_RUN_ROWS: list[dict[str, Any]] = []
 
 
@@ -3089,6 +3093,8 @@ def build_a5n_premarket_pool(cfg: Config, as_of: dt.datetime | None = None) -> l
     mother = get_mother_universe(cfg)
     candidates: list[dict[str, Any]] = []
     audit_rows: list[dict[str, Any]] = []
+    b_candidates: list[dict[str, Any]] = []
+    b_audit_rows: list[dict[str, Any]] = []
     build_run_id = str(uuid.uuid4())
     for i, (_, source) in enumerate(mother.iterrows(), start=1):
         stock_id, market_type = str(source["stock_id"]), str(source.get("type", ""))
@@ -3123,25 +3129,103 @@ def build_a5n_premarket_pool(cfg: Config, as_of: dt.datetime | None = None) -> l
             audit_rows.append(probe)
             if all(probe.get("A", {}).get(k, {}).get("passed", False) for k in ("A1", "A2", "A5")):
                 candidates.append(probe)
+            b_probe = evaluate_a5n(row=row, daily=daily, hourly=pd.DataFrame(columns=["date"]),
+                five_min=pd.DataFrame(columns=["date"]), as_of=now, add_indicators=add_indicators,
+                keep_completed_5m=keep_completed_5m_bars, daytrade_ok=True,
+                daytrade_reasons=["PRECHECK_BEFORE_OFFICIAL_DAYTRADE_LOOKUP"],
+                max_price=cfg.max_price, min_volume_shares=cfg.daytrade_min_volume_shares,
+                min_turnover=cfg.daytrade_min_turnover, config=A5_N_B_CONFIG)
+            if all(b_probe.get("A", {}).get(k, {}).get("passed", False) for k in ("A1", "A2", "A5")):
+                b_eligible, b_eligibility = a5n_official_daytrade_eligibility(stock_id, cfg, pd.Timestamp(now).date())
+                b_probe = evaluate_a5n(row=row, daily=daily, hourly=pd.DataFrame(columns=["date"]),
+                    five_min=pd.DataFrame(columns=["date"]), as_of=now, add_indicators=add_indicators,
+                    keep_completed_5m=keep_completed_5m_bars, daytrade_ok=b_eligible,
+                    daytrade_reasons=[] if b_eligible else [str(b_eligibility.get("reason"))],
+                    max_price=cfg.max_price, min_volume_shares=cfg.daytrade_min_volume_shares,
+                    min_turnover=cfg.daytrade_min_turnover, config=A5_N_B_CONFIG)
+                b_probe["official_daytrade_eligibility"] = b_eligibility
+            b_probe.update({"stock_id": stock_id, "stock_name": str(source.get("stock_name", "")),
+                "market_type": market_type, "run_id": build_run_id, "scan_started_at": pd.Timestamp(now).isoformat(),
+                "strategy_version": A5_N_B_VERSION, "shadow_only": True, "ntfy_eligible": False})
+            b_audit_rows.append(b_probe)
+            if all(b_probe.get("A", {}).get(k, {}).get("passed", False) for k in ("A1", "A2", "A5")):
+                b_candidates.append(b_probe)
         except Exception as exc:
             print(f"[A-pool-skip] {stock_id}: {exc}", file=sys.stderr)
             audit_rows.append({"run_id": build_run_id, "scan_started_at": pd.Timestamp(now).isoformat(),
                 "stock_id": stock_id, "stock_name": str(source.get("stock_name", "")),
                 "market_type": market_type, "strategy_state": "REJECTED",
                 "reject_reason": [f"A_BUILD_ERROR:{exc}"]})
+            b_audit_rows.append({"run_id": build_run_id, "scan_started_at": pd.Timestamp(now).isoformat(),
+                "stock_id": stock_id, "stock_name": str(source.get("stock_name", "")),
+                "market_type": market_type, "strategy_state": "REJECTED", "shadow_only": True,
+                "strategy_version": A5_N_B_VERSION, "reject_reason": [f"A_BUILD_ERROR:{exc}"]})
     candidates.sort(key=a5n_rank_key, reverse=True)
     kept = candidates[:int(A5_N_CONFIG["a_pool_size"])]
+    b_candidates.sort(key=a5n_rank_key, reverse=True)
+    b_kept = b_candidates[:int(A5_N_B_CONFIG["a_pool_size"])]
     payload = {"strategy_version": A5_N_VERSION, "parameter_status": A5_N_CONFIG["parameter_status"],
         "built_at": pd.Timestamp(now).isoformat(), "data_cutoff_rule": "strictly before scan date (T-1)",
         "config": A5_N_CONFIG, "mother_count": len(mother), "qualified_count": len(candidates),
         "kept_count": len(kept), "candidates": kept}
     LEDGER_DIR.mkdir(parents=True, exist_ok=True)
     A5_N_POOL_PATH.write_text(json.dumps(payload, ensure_ascii=False, default=str, indent=2), encoding="utf-8")
+    b_payload = {"strategy_version": A5_N_B_VERSION, "parameter_status": A5_N_B_CONFIG["parameter_status"],
+        "built_at": pd.Timestamp(now).isoformat(), "data_cutoff_rule": "strictly before scan date (T-1)",
+        "config": A5_N_B_CONFIG, "mother_count": len(mother), "qualified_count": len(b_candidates),
+        "kept_count": len(b_kept), "shadow_only": True, "ntfy_enabled": False, "candidates": b_kept}
+    A5_N_B_POOL_PATH.write_text(json.dumps(b_payload, ensure_ascii=False, default=str, indent=2), encoding="utf-8")
     with A5_N_PREMARKET_LEDGER_PATH.open("a", encoding="utf-8") as fh:
         for record in audit_rows:
             fh.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+    with A5_N_B_PREMARKET_LEDGER_PATH.open("a", encoding="utf-8") as fh:
+        for record in b_audit_rows:
+            fh.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
     print(f"[A-pool] qualified={len(candidates)} kept={len(kept)} path={A5_N_POOL_PATH}")
+    print(f"[B-shadow-pool] qualified={len(b_candidates)} kept={len(b_kept)} path={A5_N_B_POOL_PATH}")
     return kept
+
+
+def run_a5n_b_shadow_scan(cfg: Config, as_of: dt.datetime | None = None) -> list[dict[str, Any]]:
+    """Evaluate B-variant candidates only; never returns rows to formal results/ntfy."""
+    if not A5_N_B_POOL_PATH.exists():
+        raise RuntimeError(f"A5-N B shadow pool missing: {A5_N_B_POOL_PATH}")
+    payload = json.loads(A5_N_B_POOL_PATH.read_text(encoding="utf-8"))
+    now = as_of or dt.datetime.now(TAIPEI_TZ)
+    if pd.Timestamp(payload["built_at"]).date() != pd.Timestamp(now).date():
+        raise RuntimeError(f"A5-N B shadow pool is stale: {payload['built_at']}")
+    run_id = str(uuid.uuid4())
+    rows: list[dict[str, Any]] = []
+    for item in payload.get("candidates", []):
+        stock_id, market_type = str(item["stock_id"]), str(item["market_type"])
+        try:
+            daily = get_yahoo_daily(stock_id, market_type, cfg)
+            hourly = get_yahoo_intraday(stock_id, market_type, cfg)
+            five = get_yahoo_5m_intraday(stock_id, market_type, cfg)
+            a5 = item.get("A", {}).get("A5", {}).get("raw", {})
+            row = pd.Series({"stock_id": stock_id, "stock_name": item.get("stock_name", ""),
+                "type": market_type, "last_close": a5.get("price", 0),
+                "Trading_Volume": a5.get("median_volume_20d", 0)})
+            result = evaluate_a5n(row=row, daily=daily, hourly=hourly, five_min=five,
+                as_of=now, add_indicators=add_indicators, keep_completed_5m=keep_completed_5m_bars,
+                daytrade_ok=bool(item.get("official_daytrade_eligibility")), daytrade_reasons=[],
+                max_price=cfg.max_price, min_volume_shares=cfg.daytrade_min_volume_shares,
+                min_turnover=cfg.daytrade_min_turnover, config=A5_N_B_CONFIG)
+            result.update({"stock_id": stock_id, "stock_name": item.get("stock_name", ""),
+                "market_type": market_type, "run_id": run_id, "scan_started_at": pd.Timestamp(now).isoformat(),
+                "strategy_version": A5_N_B_VERSION, "shadow_only": True, "ntfy_eligible": False})
+            rows.append(result)
+        except Exception as exc:
+            rows.append({"stock_id": stock_id, "stock_name": item.get("stock_name", ""),
+                "run_id": run_id, "scan_started_at": pd.Timestamp(now).isoformat(),
+                "strategy_version": A5_N_B_VERSION, "strategy_state": "REJECTED",
+                "shadow_only": True, "ntfy_eligible": False, "reject_reason": [f"B_SHADOW_SCAN_ERROR:{exc}"]})
+    with A5_N_B_SIGNAL_LEDGER_PATH.open("a", encoding="utf-8") as fh:
+        for result in rows:
+            fh.write(json.dumps(result, ensure_ascii=False, default=str) + "\n")
+    counts = pd.Series([x.get("strategy_state") for x in rows]).value_counts().to_dict()
+    print(f"[B-shadow-scan] count={len(rows)} states={counts} ntfy=false")
+    return rows
 
 
 def load_a5n_premarket_universe(cfg: Config) -> pd.DataFrame:
@@ -4985,6 +5069,8 @@ def main() -> int:
             return 0
         pool_universe = load_a5n_premarket_universe(cfg) if args.a5n_scan_pool else None
         results = run(cfg, market, universe_override=pool_universe)
+        if args.a5n_scan_pool:
+            run_a5n_b_shadow_scan(cfg)
         revalidate_a5n_entries(results, cfg)
         if args.intraday_ntfy:
             message = format_intraday_ntfy_message(results, market)
