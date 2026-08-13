@@ -2,10 +2,10 @@ name: Daily Taiwan Stock Screener
 
 on:
   schedule:
-    # Dedicated intraday ntfy checks for category 4/5.
-    # 09:16/09:46/10:16 Asia/Taipei = 01:16/01:46/02:16 UTC.
-    - cron: "16,46 1 * * 1-5"
-    - cron: "16 2 * * 1-5"
+    # A5-N T-1 premarket pool: 08:40 Asia/Taipei = 00:40 UTC.
+    - cron: "40 0 * * 1-5"
+    # A5-N fixed early scans: 09:16/09:26/09:31 Asia/Taipei.
+    - cron: "16,26,31 1 * * 1-5"
     # Taiwan 19:00 target delivery window.
     # GitHub scheduled runs can be delayed or occasionally skipped, so use several
     # insurance slots around 19:00. The script uses --skip-if-sent to prevent
@@ -17,6 +17,16 @@ on:
     # 20:10/20:30/20:50 Asia/Taipei = 12:10/12:30/12:50 UTC.
     - cron: "10,30,50 12 * * *"
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode"
+        required: false
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - build-a5n-pool
+          - scan-a5n-pool
   repository_dispatch:
     types: [daily_screener]
 
@@ -28,8 +38,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  a5n-build-pool:
+    if: (github.event_name == 'schedule' && github.event.schedule == '40 0 * * 1-5') || (github.event_name == 'workflow_dispatch' && inputs.mode == 'build-a5n-pool')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      TZ: Asia/Taipei
+      FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Build A5-N T-1 candidate pool
+        run: python tw_stock_screener.py --a5n-build-pool
+      - name: Persist A5-N candidate pool
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ledgers/a5n_daily_candidate_pool.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Build A5-N premarket candidate pool"
+            git pull --rebase
+            git push
+          fi
+
   intraday-ntfy:
-    if: github.event_name == 'schedule' && (github.event.schedule == '16,46 1 * * 1-5' || github.event.schedule == '16 2 * * 1-5')
+    if: (github.event_name == 'schedule' && github.event.schedule == '16,26,31 1 * * 1-5') || (github.event_name == 'workflow_dispatch' && inputs.mode == 'scan-a5n-pool')
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -53,11 +95,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run category 4/5 ntfy alert check
-        run: python tw_stock_screener.py --intraday-ntfy
+      - name: Run A5-N candidate-pool ntfy alert check
+        run: python tw_stock_screener.py --a5n-scan-pool
+
+      - name: Persist raw signal ledgers
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ledgers/*.jsonl 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Update raw signal ledgers"
+            git pull --rebase
+            git push
+          else
+            echo "No raw signal ledger changes to persist."
+          fi
+
+      - name: Upload raw signal ledger artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: latest-intraday-raw-signal-ledgers
+          path: ledgers/*.jsonl
+          if-no-files-found: ignore
 
   run-screener:
-    if: github.event_name != 'schedule' || (github.event.schedule != '16,46 1 * * 1-5' && github.event.schedule != '16 2 * * 1-5')
+    if: (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || (github.event_name == 'workflow_dispatch' && (inputs.mode == 'auto' || inputs.mode == '')) || (github.event_name == 'schedule' && github.event.schedule != '40 0 * * 1-5' && github.event.schedule != '16,26,31 1 * * 1-5')
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -118,7 +182,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add trade_journal.csv reports/*.html sent_reports/*.txt 2>/dev/null || true
+          git add trade_journal.csv reports/*.html sent_reports/*.txt ledgers/*.jsonl 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Update screener journal"
             git pull --rebase
@@ -136,4 +200,5 @@ jobs:
             last_report.txt
             trade_journal.csv
             reports/*.html
+            ledgers/*.jsonl
           if-no-files-found: ignore

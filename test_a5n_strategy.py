@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from a5n_strategy import _completed_60k, _completed_daily
+from a5n_strategy import A5_N_CONFIG, _completed_60k, _completed_daily
 
 
 class A5NLookaheadTests(unittest.TestCase):
@@ -32,6 +32,25 @@ class A5NLookaheadTests(unittest.TestCase):
         source = Path("tw_stock_screener.py").read_text(encoding="utf-8")
         self.assertIn("本次A5-N無正式合格標的", source)
         self.assertIn("新策略測試訊號，僅供人工核對，非自動下單。", source)
+
+    def test_notification_is_capped_at_four_and_excess_is_retained(self):
+        from tw_stock_screener import format_a5n_ntfy_message
+        rows = []
+        for i in range(6):
+            rows.append({
+                "stock_id": f"00{i}", "stock_name": f"測試{i}",
+                "strategy_state": "ENTRY_VALIDATED",
+                "A": {f"A{j}": {"passed": True, "raw": {}} for j in range(1, 6)},
+                "B": {f"B{j}": {"passed": True, "raw": {}} for j in range(1, 6)},
+                "C": {f"C{j}": {"passed": True, "raw": {}} for j in range(1, 6)},
+            })
+        message = format_a5n_ntfy_message(rows)
+        selected = [x for x in rows if x.get("notification_selected")]
+        suppressed = [x for x in rows if x.get("notification_suppressed_reason")]
+        self.assertEqual(len(selected), A5_N_CONFIG["max_ntfy_entries_per_scan"])
+        self.assertEqual(len(suppressed), 2)
+        self.assertIn("超過每次4檔上限", message)
+        self.assertTrue(all(x["strategy_state"] == "ENTRY_VALIDATED" for x in suppressed))
 
 
 if __name__ == "__main__":

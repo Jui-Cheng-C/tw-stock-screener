@@ -22,9 +22,18 @@ A5_N_CONFIG: dict[str, Any] = {
     "parameter_status": "research_default",
     "platform_lookback_days": 12,
     "platform_exclude_recent_days": 2,
+    "platform_max_range_pct": 15.0,
+    "platform_min_days": 8,
     "daily_near_high_pct": 4.0,
     "daily_ma_cluster_pct": 5.0,
     "daily_max_ma20_distance_pct": 8.0,
+    "daily_max_recent_3d_gain_pct": 12.0,
+    "daily_max_upper_shadow_pct": 4.0,
+    "liquidity_lookback_days": 20,
+    "a_pool_size": 40,
+    "a_pool_min_size": 30,
+    "a_pool_max_size": 50,
+    "max_ntfy_entries_per_scan": 4,
     "hourly_structure_bars": 5,
     "hourly_near_breakout_pct": 4.0,
     "hourly_max_ema5_distance_pct": 3.0,
@@ -32,11 +41,31 @@ A5_N_CONFIG: dict[str, Any] = {
     "pullback_touch_tolerance_pct": 0.8,
     "pullback_break_tolerance_pct": 0.5,
     "relative_volume_min": 1.2,
+    "pullback_max_volume_ratio": 0.8,
     "max_signal_age_seconds": 900,
     "max_breakout_extension_pct": 2.0,
     "max_stop_risk_pct": 1.5,
     "min_reward_risk": 2.0,
 }
+
+
+def a5n_rank_key(item: dict[str, Any]) -> tuple[float, ...]:
+    """Stable, pre-declared A/B/C ranking; larger tuple ranks first."""
+    gates = lambda layer: sum(int(v.get("passed", False)) for v in item.get(layer, {}).values())
+    a1 = item.get("A", {}).get("A1", {}).get("raw", {})
+    a3 = item.get("A", {}).get("A3", {}).get("raw", {})
+    b5 = item.get("B", {}).get("B5", {}).get("raw", {})
+    c4 = item.get("C", {}).get("C4", {}).get("raw", {})
+    c5 = item.get("C", {}).get("C5", {}).get("raw", {})
+    return (
+        float(gates("A") + gates("B") + gates("C")),
+        float(gates("C")), float(gates("B")), float(gates("A")),
+        -abs(_num(c5.get("extension_pct"), 999.0)),
+        _num(c4.get("relative_volume")),
+        -abs(_num(b5.get("distance_pct"), 999.0)),
+        -abs(_num(a1.get("distance_to_high_pct"), 999.0)),
+        -abs(_num(a3.get("ma20_distance_pct"), 999.0)),
+    )
 
 
 def _num(value: Any, default: float = 0.0) -> float:
@@ -107,16 +136,23 @@ def evaluate_a5n(
     near_high = (platform_high - close) / platform_high * 100 if platform_high else 999
     lows = window["min"].astype(float)
     low_not_falling = _num(lows.tail(max(2, len(lows)//2)).min()) >= _num(lows.head(max(2, len(lows)//2)).min()) * .98
-    a1 = low_not_falling and -1.0 <= near_high <= cfg["daily_near_high_pct"]
-    result["A"]["A1"] = _gate(a1, platform_low=platform_low, platform_high=platform_high, distance_to_high_pct=round(near_high, 2), low_not_falling=low_not_falling)
+    platform_range = (platform_high / platform_low - 1) * 100 if platform_low else 999
+    a1 = (len(window) >= cfg["platform_min_days"] and low_not_falling
+          and -1.0 <= near_high <= cfg["daily_near_high_pct"]
+          and platform_range <= cfg["platform_max_range_pct"])
+    result["A"]["A1"] = _gate(a1, platform_low=platform_low, platform_high=platform_high, distance_to_high_pct=round(near_high, 2), low_not_falling=low_not_falling, platform_range_pct=round(platform_range, 2), platform_days=len(window))
     ma5, ma10, ma20 = (_num(latest[x]) for x in ("ma5", "ma10", "ma20"))
     ma20_prev = _num(di.iloc[-4]["ma20"])
     cluster = (max(ma5, ma10, ma20)-min(ma5, ma10, ma20))/close*100 if close else 999
     a2 = close > ma20 and ma20 >= ma20_prev and not (_num(di.iloc[-1]["ma5"]) < _num(di.iloc[-3]["ma5"]) and _num(di.iloc[-1]["ma10"]) < _num(di.iloc[-3]["ma10"])) and cluster <= cfg["daily_ma_cluster_pct"]
     result["A"]["A2"] = _gate(a2, close=close, ma5=ma5, ma10=ma10, ma20=ma20, ma20_prior=ma20_prev, cluster_pct=round(cluster,2))
     ma20_dist = (close/ma20-1)*100 if ma20 else 999
-    a3 = ma20_dist <= cfg["daily_max_ma20_distance_pct"]
-    result["A"]["A3"] = _gate(a3, ma20_distance_pct=round(ma20_dist,2), pressure=platform_high)
+    gain3 = (close / _num(di.iloc[-4]["close"]) - 1) * 100 if len(di) >= 4 else 999
+    upper_shadow = (_num(latest["max"]) / max(close, _num(latest["open"])) - 1) * 100 if close else 999
+    a3 = (ma20_dist <= cfg["daily_max_ma20_distance_pct"]
+          and gain3 <= cfg["daily_max_recent_3d_gain_pct"]
+          and upper_shadow <= cfg["daily_max_upper_shadow_pct"])
+    result["A"]["A3"] = _gate(a3, ma20_distance_pct=round(ma20_dist,2), recent_3d_gain_pct=round(gain3,2), upper_shadow_pct=round(upper_shadow,2), pressure=platform_high)
     hist = di["hist"].astype(float)
     dif = di["dif"].astype(float)
     macd_reason = "none"
@@ -125,11 +161,18 @@ def evaluate_a5n(
     elif hist.iloc[-1] > hist.iloc[-2] > 0: macd_reason = "positive_hist_expanding"
     elif hist.iloc[-3] < hist.iloc[-2] < hist.iloc[-1] <= 0: macd_reason = "negative_hist_contracting"
     result["A"]["A4"] = _gate(macd_reason != "none", reason=macd_reason, dif=_num(dif.iloc[-1]), histogram=_num(hist.iloc[-1]))
-    price = _num(row.get("last_close"), close)
-    volume = _num(row.get("Trading_Volume"))
-    turnover = price * volume
-    a5 = daytrade_ok and price <= max_price and volume >= min_volume_shares and turnover >= min_turnover
-    result["A"]["A5"] = _gate(a5, price=price, max_price=max_price, volume=volume, min_volume=min_volume_shares, turnover=turnover, min_turnover=min_turnover, eligibility_source="existing_daytrade_gate; official daytrade/disposition/spread fields unavailable", reasons=daytrade_reasons)
+    price = close
+    liq = d.tail(int(cfg["liquidity_lookback_days"])).copy()
+    volumes = liq["Trading_Volume"].astype(float)
+    avg_turnover = float((liq["close"].astype(float) * volumes).mean())
+    median_volume = float(volumes.median())
+    sparse_ratio = float((volumes < median_volume * .25).mean()) if median_volume else 1.0
+    a5 = (daytrade_ok and price <= max_price and median_volume >= min_volume_shares
+          and avg_turnover >= min_turnover and sparse_ratio <= .20)
+    result["A"]["A5"] = _gate(a5, price=price, max_price=max_price,
+        median_volume_20d=round(median_volume), min_volume=min_volume_shares,
+        average_turnover_20d=round(avg_turnover), min_turnover=min_turnover,
+        sparse_day_ratio=round(sparse_ratio,3), eligibility_source="T-1 completed daily 20-day liquidity + existing daytrade eligibility", reasons=daytrade_reasons)
     if not (a1 and a2 and a5):
         result["reject_reason"] += [k for k in ("A1","A2","A5") if not result["A"][k]["passed"]]
         return result
@@ -154,7 +197,8 @@ def evaluate_a5n(
     hh = hi["hist"].astype(float); hd = hi["dif"].astype(float)
     b4 = (hh.iloc[-1] > 0 and hh.iloc[-1] >= hh.iloc[-2]) or (hh.iloc[-3] < hh.iloc[-2] < hh.iloc[-1] <= 0 and hd.iloc[-1] > hd.iloc[-2])
     result["B"]["B4"] = _gate(b4, dif=_num(hd.iloc[-1]), histogram=_num(hh.iloc[-1]), histogram_prior=_num(hh.iloc[-2]))
-    candidates = {"daily_platform_high": platform_high, "hourly_range_high": _num(tail.iloc[:-1]["max"].max()), "previous_day_high": _num(d.iloc[-1]["max"])}
+    prior_5m = f[f["date"].dt.date < now.date()].tail(12)
+    candidates = {"daily_platform_high": platform_high, "hourly_range_high": _num(tail.iloc[:-1]["max"].max()), "previous_day_high": _num(d.iloc[-1]["max"]), "previous_day_tail_5k_high": _num(prior_5m["max"].max())}
     breakout_level = max(candidates.values())
     result["breakout_level"] = breakout_level
     result["B"]["B5"] = _gate(hclose >= breakout_level*(1-cfg["hourly_near_breakout_pct"]/100), candidates=candidates, selected=breakout_level, distance_pct=round((breakout_level/hclose-1)*100,2))
@@ -199,9 +243,10 @@ def evaluate_a5n(
     pbi=pb.name; c3=_num(pb["close"])>=_num(fem5.loc[pbi]) and _num(fem5.loc[pbi])>_num(fem5.iloc[max(0,fi.index.get_loc(pbi)-2)]) and (_num(fem5.loc[pbi])>=_num(fem10.loc[pbi]) or _num(fem5.loc[pbi])>_num(fem20.loc[pbi]))
     result["C"]["C3"]=_gate(c3, close=_num(pb["close"]),ema5=_num(fem5.loc[pbi]),ema10=_num(fem10.loc[pbi]),ema20=_num(fem20.loc[pbi]))
     bhpos=fi.index.get_loc(breakout_idx); prevvol=fi.iloc[max(0,bhpos-10):bhpos]["Trading_Volume"].astype(float); relvol=_num(breakout_bar["Trading_Volume"])/(float(prevvol.median()) or 1)
-    h5=fi["hist"].astype(float); d5=fi["dif"].astype(float); c4=((h5.loc[pbi]>0 or h5.loc[pbi]>h5.iloc[max(0,fi.index.get_loc(pbi)-2)]) and d5.loc[pbi]>d5.iloc[max(0,fi.index.get_loc(pbi)-2)] and relvol>=cfg["relative_volume_min"])
+    pullback_volume_ratio=_num(pb["Trading_Volume"])/(_num(breakout_bar["Trading_Volume"]) or 1)
+    h5=fi["hist"].astype(float); d5=fi["dif"].astype(float); c4=((h5.loc[pbi]>0 or (h5.loc[pbi]>h5.iloc[max(0,fi.index.get_loc(pbi)-2)] and h5.loc[pbi]>h5.iloc[max(0,fi.index.get_loc(pbi)-1)])) and d5.loc[pbi]>d5.iloc[max(0,fi.index.get_loc(pbi)-2)] and relvol>=cfg["relative_volume_min"] and pullback_volume_ratio<=cfg["pullback_max_volume_ratio"])
     reason="positive_hist" if h5.loc[pbi]>0 else "hist_improving"
-    result["C"]["C4"]=_gate(c4,macd_reason=reason,dif=_num(d5.loc[pbi]),histogram=_num(h5.loc[pbi]),relative_volume=round(relvol,2))
+    result["C"]["C4"]=_gate(c4,macd_reason=reason,dif=_num(d5.loc[pbi]),histogram=_num(h5.loc[pbi]),relative_volume=round(relvol,2),pullback_volume_ratio=round(pullback_volume_ratio,2))
     signal_price=_num(pb["close"]); stop=min(pullback_low,breakout_level); risk=(signal_price-stop)/signal_price*100 if signal_price else 999; pressure=max(platform_high,_num(today["max"].max())); reward=max(0,pressure-signal_price); rr=reward/(signal_price-stop) if signal_price>stop else 0
     signal_ts=pd.Timestamp(pb["date"]); age=max(0,(now-signal_ts).total_seconds()); latest=_num(today.iloc[-1]["close"]); latest_ema5=_num(fem5.loc[today.index[-1]]); extension=(latest/breakout_level-1)*100
     c5=age<=cfg["max_signal_age_seconds"] and latest>=breakout_level*(1-cfg["pullback_break_tolerance_pct"]/100) and latest>=latest_ema5*.995 and extension<=cfg["max_breakout_extension_pct"] and risk<=cfg["max_stop_risk_pct"] and rr>=cfg["min_reward_risk"]
@@ -213,4 +258,3 @@ def evaluate_a5n(
         result["strategy_state"]="EXPIRED" if not c5 else "REJECTED"
         result["reject_reason"] += [k for k in ("C2","C3","C4","C5") if not result["C"].get(k,{}).get("passed",False)]
     return result
-

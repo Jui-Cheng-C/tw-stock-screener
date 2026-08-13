@@ -37,7 +37,7 @@ import pandas as pd
 import requests
 import yfinance as yf
 from bs4 import BeautifulSoup
-from a5n_strategy import A5_N_CONFIG, A5_N_VERSION, evaluate_a5n
+from a5n_strategy import A5_N_CONFIG, A5_N_VERSION, a5n_rank_key, evaluate_a5n
 
 
 FINMIND_URL = "https://api.finmindtrade.com/api/v4/data"
@@ -116,6 +116,7 @@ A3_OBSERVATION_CATEGORY = "60K起漲雷達【觀察／準備型，非正式進�
 A5_SIGNAL_PRICE_RULE = "completed_5k_signal_bar_close"
 A5_LEGACY_ENABLED = False
 A5_N_LEDGER_PATH = LEDGER_DIR / "a5n_signal_ledger.jsonl"
+A5_N_POOL_PATH = LEDGER_DIR / "a5n_daily_candidate_pool.json"
 A5_N_RUN_ROWS: list[dict[str, Any]] = []
 
 
@@ -3047,6 +3048,106 @@ def get_universe(cfg: Config) -> pd.DataFrame:
     return universe
 
 
+def get_mother_universe(cfg: Config) -> pd.DataFrame:
+    """Unfiltered listed common-stock mother universe for the T-1 A-pool build."""
+    if not cfg.finmind_token:
+        raise RuntimeError("FINMIND_TOKEN is required to build the A5-N premarket pool.")
+    info = finmind_get("TaiwanStockInfo", token=cfg.finmind_token)
+    info = info[
+        info["type"].isin(["twse", "tpex"])
+        & info["stock_id"].str.fullmatch(r"\d{4}", na=False)
+        & ~info["industry_category"].isin(["ETF", "大盤", "Index", "所有證券"])
+    ].drop_duplicates(subset=["stock_id"]).copy()
+    if cfg.max_stocks > 0:
+        info = info.head(cfg.max_stocks)
+    return info
+
+
+def a5n_official_daytrade_eligibility(stock_id: str, cfg: Config, scan_date: dt.date) -> tuple[bool, dict[str, Any]]:
+    """Use FinMind's exchange-sourced same-day premarket day-trading list."""
+    end = scan_date + dt.timedelta(days=1)
+    frame = finmind_get("TaiwanStockDayTrading", token=cfg.finmind_token, data_id=stock_id,
+                        start_date=scan_date.isoformat(), end_date=end.isoformat())
+    if frame.empty:
+        return False, {"source": "FinMind/TaiwanStockDayTrading", "date": scan_date.isoformat(),
+                       "reason": "NOT_IN_OFFICIAL_DAYTRADE_LIST"}
+    frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+    same_day = frame[frame["date"].dt.date == scan_date]
+    if same_day.empty:
+        return False, {"source": "FinMind/TaiwanStockDayTrading", "date": scan_date.isoformat(),
+                       "reason": "OFFICIAL_LIST_DATE_MISSING"}
+    latest = same_day.iloc[-1]
+    return True, {"source": "FinMind/TaiwanStockDayTrading", "date": scan_date.isoformat(),
+                  "BuyAfterSale": str(latest.get("BuyAfterSale", "")),
+                  "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"}
+
+
+def build_a5n_premarket_pool(cfg: Config, as_of: dt.datetime | None = None) -> list[dict[str, Any]]:
+    """Build and persist the ranked A pool from completed T-1 daily bars only."""
+    now = as_of or dt.datetime.now(TAIPEI_TZ)
+    mother = get_mother_universe(cfg)
+    candidates: list[dict[str, Any]] = []
+    for i, (_, source) in enumerate(mother.iterrows(), start=1):
+        stock_id, market_type = str(source["stock_id"]), str(source.get("type", ""))
+        print(f"[A-pool {i}/{len(mother)}] {stock_id} {source.get('stock_name','')}")
+        try:
+            daily = get_yahoo_daily(stock_id, market_type, cfg)
+            if daily.empty:
+                continue
+            t1 = daily[pd.to_datetime(daily["date"]).dt.date < pd.Timestamp(now).date()]
+            last = t1.iloc[-1] if not t1.empty else None
+            row = pd.Series({**source.to_dict(), "last_close": float(last["close"]) if last is not None else 0,
+                "Trading_Volume": float(last["Trading_Volume"]) if last is not None else 0})
+            # The existing eligibility source has no official disposition/spread fields;
+            # this limitation is retained explicitly instead of inventing availability.
+            probe = evaluate_a5n(row=row, daily=daily, hourly=pd.DataFrame(columns=["date"]),
+                five_min=pd.DataFrame(columns=["date"]), as_of=now, add_indicators=add_indicators,
+                keep_completed_5m=keep_completed_5m_bars, daytrade_ok=True,
+                daytrade_reasons=["PRECHECK_BEFORE_OFFICIAL_DAYTRADE_LOOKUP"],
+                max_price=cfg.max_price, min_volume_shares=cfg.daytrade_min_volume_shares,
+                min_turnover=cfg.daytrade_min_turnover)
+            if all(probe.get("A", {}).get(k, {}).get("passed", False) for k in ("A1", "A2", "A5")):
+                eligible, eligibility = a5n_official_daytrade_eligibility(stock_id, cfg, pd.Timestamp(now).date())
+                probe = evaluate_a5n(row=row, daily=daily, hourly=pd.DataFrame(columns=["date"]),
+                    five_min=pd.DataFrame(columns=["date"]), as_of=now, add_indicators=add_indicators,
+                    keep_completed_5m=keep_completed_5m_bars, daytrade_ok=eligible,
+                    daytrade_reasons=[] if eligible else [str(eligibility.get("reason"))],
+                    max_price=cfg.max_price, min_volume_shares=cfg.daytrade_min_volume_shares,
+                    min_turnover=cfg.daytrade_min_turnover)
+                probe["official_daytrade_eligibility"] = eligibility
+            probe.update({"stock_id": stock_id, "stock_name": str(source.get("stock_name", "")),
+                "market_type": market_type})
+            if all(probe.get("A", {}).get(k, {}).get("passed", False) for k in ("A1", "A2", "A5")):
+                candidates.append(probe)
+        except Exception as exc:
+            print(f"[A-pool-skip] {stock_id}: {exc}", file=sys.stderr)
+    candidates.sort(key=a5n_rank_key, reverse=True)
+    kept = candidates[:int(A5_N_CONFIG["a_pool_size"])]
+    payload = {"strategy_version": A5_N_VERSION, "parameter_status": A5_N_CONFIG["parameter_status"],
+        "built_at": pd.Timestamp(now).isoformat(), "data_cutoff_rule": "strictly before scan date (T-1)",
+        "config": A5_N_CONFIG, "mother_count": len(mother), "qualified_count": len(candidates),
+        "kept_count": len(kept), "candidates": kept}
+    LEDGER_DIR.mkdir(parents=True, exist_ok=True)
+    A5_N_POOL_PATH.write_text(json.dumps(payload, ensure_ascii=False, default=str, indent=2), encoding="utf-8")
+    print(f"[A-pool] qualified={len(candidates)} kept={len(kept)} path={A5_N_POOL_PATH}")
+    return kept
+
+
+def load_a5n_premarket_universe(cfg: Config) -> pd.DataFrame:
+    if not A5_N_POOL_PATH.exists():
+        raise RuntimeError(f"A5-N premarket pool missing: {A5_N_POOL_PATH}")
+    payload = json.loads(A5_N_POOL_PATH.read_text(encoding="utf-8"))
+    built = pd.Timestamp(payload["built_at"])
+    today = pd.Timestamp.now(tz=TAIPEI_TZ).date() if not cfg.report_date else pd.Timestamp(cfg.report_date).date()
+    if built.date() != today:
+        raise RuntimeError(f"A5-N premarket pool is stale: built_at={built}, expected={today}")
+    rows = [{"stock_id": x["stock_id"], "stock_name": x["stock_name"], "type": x["market_type"],
+             "Trading_Volume": x.get("A", {}).get("A5", {}).get("raw", {}).get("median_volume_20d", 0),
+             "a5n_daytrade_eligible": bool(x.get("official_daytrade_eligibility"))}
+            for x in payload.get("candidates", [])]
+    return pd.DataFrame(rows)
+
+
 def build_universe_by_yahoo_volume(info: pd.DataFrame, cfg: Config) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
     symbols = [yahoo_symbol(row["stock_id"], row["type"]) for _, row in info.iterrows()]
@@ -3208,6 +3309,9 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         five_k_info: dict[str, Any] = {}
         intraday_volume_ok = False
         daytrade_ok, daytrade_reasons = daytrade_filter_ok(row, cfg, stop)
+        if "a5n_daytrade_eligible" in row and not bool(row.get("a5n_daytrade_eligible")):
+            daytrade_ok = False
+            daytrade_reasons.append("NOT_IN_PREMARKET_OFFICIAL_DAYTRADE_LIST")
         if cfg.enable_intraday_check:
             intraday = get_yahoo_intraday(stock_id, market_type, cfg)
             if intraday_session_is_current(intraday, cfg):
@@ -3544,7 +3648,7 @@ LIMITED_CATEGORY_COUNTS = {
     "relay_breakout": 3,
     "prepare_turn": 3,
     "precision_entry": 3,
-    "extreme_daytrade": 5,
+    "extreme_daytrade": int(A5_N_CONFIG["max_ntfy_entries_per_scan"]),
     "shortlist": 9,
 }
 
@@ -4458,10 +4562,25 @@ def a5n_gate_summary(item: dict[str, Any]) -> str:
 
 
 def format_a5n_ntfy_message(rows: list[dict[str, Any]]) -> str:
-    validated = [x for x in rows if x.get("strategy_state") == "ENTRY_VALIDATED"]
+    latest_by_symbol: dict[str, dict[str, Any]] = {}
+    for x in rows:
+        symbol = str(x.get("stock_id") or "")
+        if not symbol:
+            continue
+        current = latest_by_symbol.get(symbol)
+        if current is None or (x.get("revalidation") and not current.get("revalidation")):
+            latest_by_symbol[symbol] = x
+    effective_rows = list(latest_by_symbol.values())
+    validated = sorted([x for x in effective_rows if x.get("strategy_state") == "ENTRY_VALIDATED"], key=a5n_rank_key, reverse=True)
+    max_entries = int(A5_N_CONFIG["max_ntfy_entries_per_scan"])
+    selected_ids = {id(x) for x in validated[:max_entries]}
+    for rank, x in enumerate(validated, start=1):
+        x["notification_rank"] = rank
+        x["notification_selected"] = id(x) in selected_ids
+        x["notification_suppressed_reason"] = None if id(x) in selected_ids else "ENTRY_VALIDATED_OVER_SCAN_LIMIT"
     lines = ["🧪 A5-N 新策略即時測試"]
     if validated:
-        for x in validated[:5]:
+        for x in validated[:max_entries]:
             a1=(x.get("A",{}).get("A1",{}).get("raw",{})); a2=(x.get("A",{}).get("A2",{}).get("raw",{})); a4=(x.get("A",{}).get("A4",{}).get("raw",{}))
             b1=(x.get("B",{}).get("B1",{}).get("raw",{})); b2=(x.get("B",{}).get("B2",{}).get("raw",{})); b4=(x.get("B",{}).get("B4",{}).get("raw",{}))
             c3=(x.get("C",{}).get("C3",{}).get("raw",{})); c4=(x.get("C",{}).get("C4",{}).get("raw",{}))
@@ -4470,15 +4589,17 @@ def format_a5n_ntfy_message(rows: list[dict[str, Any]]) -> str:
                 f"日K：平台 {a1.get('platform_low')}–{a1.get('platform_high')}；距上緣 {a1.get('distance_to_high_pct')}%；MA20 {a2.get('ma20')}（前值 {a2.get('ma20_prior')}）；MACD {a4.get('reason')}",
                 f"60K：最後完成 {x.get('last_completed_60k_timestamp')}；低點 {b1.get('first_low')}→{b1.get('last_low')}；MA20/60 {b2.get('ma20')}/{b2.get('ma60')}；MACD柱 {b4.get('histogram')}；突破價 {x.get('breakout_level')}",
                 f"5K：突破 {x.get('breakout_timestamp')} @ {x.get('breakout_level')}；回測低 {x.get('pullback_low')}；訊號 {x.get('signal_price')}；複驗 {x.get('recheck_price')} @ {x.get('recheck_timestamp')}",
-                f"EMA5 {c3.get('ema5')}；MACD {c4.get('macd_reason')}；相對量 {c4.get('relative_volume')}；防守 {x.get('structural_stop')}（{x.get('stop_risk_pct')}%）；年齡 {x.get('signal_age_seconds')}秒",
+                f"EMA5 {c3.get('ema5')}；MACD {c4.get('macd_reason')}；相對量 {c4.get('relative_volume')}；回測量/突破量 {c4.get('pullback_volume_ratio')}；防守 {x.get('structural_stop')}（{x.get('stop_risk_pct')}%）；年齡 {x.get('signal_age_seconds')}秒",
             ]
+        if len(validated) > max_entries:
+            lines.append(f"另有 {len(validated)-max_entries} 檔合格但超過每次{max_entries}檔上限，已保留於Ledger。")
     else:
         lines.append("本次A5-N無正式合格標的")
-        ranked = sorted(rows, key=lambda x: sum(int(v.get("passed",False)) for z in ("A","B","C") for v in x.get(z,{}).values()), reverse=True)[:5]
+        ranked = sorted(effective_rows, key=a5n_rank_key, reverse=True)[:5]
         for x in ranked:
             reasons = ",".join(x.get("reject_reason") or ["資料不足/尚未觸發"])
             lines.append(f"接近者｜{x.get('stock_id')} {x.get('stock_name')}｜{x.get('strategy_state')}｜{a5n_gate_summary(x)}｜未過：{reasons}")
-    lines.append(f"參數：{A5_N_CONFIG.get('parameter_status')}｜{A5_N_VERSION}")
+    lines.append(f"參數：{A5_N_CONFIG.get('parameter_status')}｜{A5_N_VERSION}｜每次上限{max_entries}檔")
     lines.append("新策略測試訊號，僅供人工核對，非自動下單。")
     return "\n".join(lines)
 
@@ -4641,11 +4762,11 @@ def run_mode_name(cfg: Config) -> str:
     return "formal_report"
 
 
-def run(cfg: Config, market: dict[str, Any] | None = None) -> dict[str, list[dict[str, Any]]]:
+def run(cfg: Config, market: dict[str, Any] | None = None, universe_override: pd.DataFrame | None = None) -> dict[str, list[dict[str, Any]]]:
     A5_N_RUN_ROWS.clear()
     active_keys = active_category_keys(cfg)
     reset_ledger_context(cfg, run_mode_name(cfg), market)
-    universe = get_universe(cfg)
+    universe = universe_override.copy() if universe_override is not None else get_universe(cfg)
     print(f"Universe size after volume filter: {len(universe)}")
     results: dict[str, list[dict[str, Any]]] = {key: [] for key in active_keys}
     for i, (_, row) in enumerate(universe.iterrows(), start=1):
@@ -4791,6 +4912,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--only-prepare-turn", action="store_true", help="Run only category 3")
     parser.add_argument("--intraday-ntfy", action="store_true", help="Run category 4/5 intraday alert mode and push ntfy only")
     parser.add_argument("--a5n-test", action="store_true", help="Run A5-N research scan now and send its dedicated test ntfy")
+    parser.add_argument("--a5n-build-pool", action="store_true", help="Build today's A5-N T-1 premarket candidate pool")
+    parser.add_argument("--a5n-scan-pool", action="store_true", help="Scan only today's persisted A5-N candidate pool")
     parser.add_argument("--report-date", default=None, help="Use data up to YYYY-MM-DD for review/backtest")
     parser.add_argument(
         "--skip-if-sent",
@@ -4818,14 +4941,18 @@ def main() -> int:
         cfg = dataclasses.replace(cfg, only_short_entry=True)
     if args.only_prepare_turn:
         cfg = dataclasses.replace(cfg, only_prepare_turn=True)
-    if args.intraday_ntfy or args.a5n_test:
+    if args.intraday_ntfy or args.a5n_test or args.a5n_scan_pool:
         cfg = dataclasses.replace(cfg, intraday_alert_only=True)
     if args.report_date:
         cfg = dataclasses.replace(cfg, report_date=args.report_date)
 
-    if args.intraday_ntfy or args.a5n_test:
+    if args.a5n_build_pool:
+        build_a5n_premarket_pool(cfg)
+        return 0
+
+    if args.intraday_ntfy or args.a5n_test or args.a5n_scan_pool:
         market = market_state(cfg)
-        if not market.get("ok") and not args.a5n_test:
+        if not market.get("ok") and not (args.a5n_test or args.a5n_scan_pool):
             reason = str(market.get("reason") or "大盤狀態未通過")
             print(f"[market-skip] {reason}")
             reset_ledger_context(cfg, run_mode_name(cfg), market)
@@ -4845,7 +4972,8 @@ def main() -> int:
                 error_text=reason,
             )
             return 0
-        results = run(cfg, market)
+        pool_universe = load_a5n_premarket_universe(cfg) if args.a5n_scan_pool else None
+        results = run(cfg, market, universe_override=pool_universe)
         revalidate_a5n_entries(results, cfg)
         if args.intraday_ntfy:
             message = format_intraday_ntfy_message(results, market)
