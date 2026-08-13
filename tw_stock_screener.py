@@ -3102,6 +3102,13 @@ def build_a5n_premarket_pool(cfg: Config, as_of: dt.datetime | None = None) -> l
         try:
             daily = get_yahoo_daily(stock_id, market_type, cfg)
             if daily.empty:
+                empty_base = {"run_id": build_run_id, "scan_started_at": pd.Timestamp(now).isoformat(),
+                    "stock_id": stock_id, "stock_name": str(source.get("stock_name", "")),
+                    "market_type": market_type, "strategy_state": "REJECTED",
+                    "reject_reason": ["A_DATA_EMPTY"]}
+                audit_rows.append(empty_base)
+                b_audit_rows.append({**empty_base, "strategy_version": A5_N_B_VERSION,
+                    "shadow_only": True, "ntfy_eligible": False})
                 continue
             t1 = daily[pd.to_datetime(daily["date"]).dt.date < pd.Timestamp(now).date()]
             last = t1.iloc[-1] if not t1.empty else None
@@ -3167,13 +3174,16 @@ def build_a5n_premarket_pool(cfg: Config, as_of: dt.datetime | None = None) -> l
     payload = {"strategy_version": A5_N_VERSION, "parameter_status": A5_N_CONFIG["parameter_status"],
         "built_at": pd.Timestamp(now).isoformat(), "data_cutoff_rule": "strictly before scan date (T-1)",
         "config": A5_N_CONFIG, "mother_count": len(mother), "qualified_count": len(candidates),
-        "kept_count": len(kept), "candidates": kept}
+        "kept_count": len(kept), "evaluated_count": len(audit_rows),
+        "missing_count": len(mother) - len(audit_rows), "candidates": kept}
     LEDGER_DIR.mkdir(parents=True, exist_ok=True)
     A5_N_POOL_PATH.write_text(json.dumps(payload, ensure_ascii=False, default=str, indent=2), encoding="utf-8")
     b_payload = {"strategy_version": A5_N_B_VERSION, "parameter_status": A5_N_B_CONFIG["parameter_status"],
         "built_at": pd.Timestamp(now).isoformat(), "data_cutoff_rule": "strictly before scan date (T-1)",
         "config": A5_N_B_CONFIG, "mother_count": len(mother), "qualified_count": len(b_candidates),
-        "kept_count": len(b_kept), "shadow_only": True, "ntfy_enabled": False, "candidates": b_kept}
+        "kept_count": len(b_kept), "evaluated_count": len(b_audit_rows),
+        "missing_count": len(mother) - len(b_audit_rows), "shadow_only": True,
+        "ntfy_enabled": False, "candidates": b_kept}
     A5_N_B_POOL_PATH.write_text(json.dumps(b_payload, ensure_ascii=False, default=str, indent=2), encoding="utf-8")
     with A5_N_PREMARKET_LEDGER_PATH.open("a", encoding="utf-8") as fh:
         for record in audit_rows:

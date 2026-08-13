@@ -23,6 +23,11 @@ class A5NLookaheadTests(unittest.TestCase):
     def test_variant_b_zero_exclusion_keeps_seven_completed_days(self):
         source = Path("a5n_strategy.py").read_text(encoding="utf-8")
         self.assertIn("window_end = None if exclude == 0 else -exclude", source)
+
+    def test_premarket_empty_data_is_audited(self):
+        source = Path("tw_stock_screener.py").read_text(encoding="utf-8")
+        self.assertIn('"reject_reason": ["A_DATA_EMPTY"]', source)
+        self.assertIn('"missing_count": len(mother) - len(audit_rows)', source)
     def test_ntfy_unicode_title_is_ascii_header_safe(self):
         encoded = Header("🧪 A5-N 新策略測試", "utf-8").encode()
         encoded.encode("latin-1")
