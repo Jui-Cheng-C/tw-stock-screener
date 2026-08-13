@@ -18,12 +18,16 @@ import datetime as dt
 import json
 import os
 import smtplib
+import subprocess
 import sys
 import time
 import traceback
+import uuid
+from zoneinfo import ZoneInfo
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.header import Header
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -33,12 +37,122 @@ import pandas as pd
 import requests
 import yfinance as yf
 from bs4 import BeautifulSoup
+from a5n_strategy import A5_N_CONFIG, A5_N_VERSION, evaluate_a5n
 
 
 FINMIND_URL = "https://api.finmindtrade.com/api/v4/data"
 TRADE_JOURNAL_PATH = Path("trade_journal.csv")
 REPORT_DIR = Path("reports")
 SENT_MARKER_DIR = Path("sent_reports")
+LEDGER_DIR = Path("ledgers")
+RUN_LEDGER_PATH = LEDGER_DIR / "run_ledger.jsonl"
+RAW_SIGNAL_SNAPSHOT_LEDGER_PATH = LEDGER_DIR / "raw_signal_snapshot_ledger.jsonl"
+SIGNAL_EVENT_DETAIL_LEDGER_PATH = LEDGER_DIR / "signal_event_detail_ledger.jsonl"
+TAIPEI_TZ = ZoneInfo("Asia/Taipei")
+
+LEDGER_SCHEMA_VERSION = "raw-signal-ledger-v1.0"
+STRATEGY_VERSION = "baseline-2026-08-11-current-code"
+MASTER_STRATEGY_SPEC_VERSION = "Master v1.0.2"
+STRATEGY_KEY_TO_ID = {
+    "strong_continuation": "A1",
+    "relay_breakout": "A2",
+    "prepare_turn": "A3",
+    "precision_entry": "A4",
+    "extreme_daytrade": "A5",
+}
+STRATEGY_VERSIONS = {
+    "A1": "A1-current-baseline-2026-08-11",
+    "A2": "A2-current-baseline-2026-08-11",
+    "A3": "A3-60k-radar-current-baseline-2026-08-11",
+    "A4": "A4-60k-precision-current-baseline-2026-08-11",
+    "A5": A5_N_VERSION,
+}
+TECH_PARAM_REGISTRY_VERSION = "tech-v1.0-20260811"
+TIMEFRAME_DAILY = "daily"
+TIMEFRAME_60K = "60k"
+TIMEFRAME_5K = "5k"
+TIMEFRAME_WEEKLY = "weekly"
+TIMEFRAME_MONTHLY = "monthly"
+
+TECH_PARAM_REGISTRY: dict[str, dict[str, Any]] = {
+    TIMEFRAME_DAILY: {
+        "macd": {"fast": 8, "slow": 17, "signal": 9},
+        "kd": {"period": 10, "k_smoothing": 4, "d_smoothing": 4},
+        "j_calculated": True,
+    },
+    TIMEFRAME_60K: {
+        "macd": {"fast": 8, "slow": 17, "signal": 9},
+        "kd": {"period": 10, "k_smoothing": 4, "d_smoothing": 4},
+        "j_calculated": True,
+    },
+    TIMEFRAME_5K: {
+        "macd": {"fast": 12, "slow": 26, "signal": 9},
+        "kd": {"period": 9, "k_smoothing": 3, "d_smoothing": 3},
+        "j_calculated": True,
+    },
+    # Legacy helpers still resample daily data into weekly/monthly views.
+    TIMEFRAME_WEEKLY: {
+        "macd": {"fast": 8, "slow": 17, "signal": 9},
+        "kd": {"period": 10, "k_smoothing": 4, "d_smoothing": 4},
+        "j_calculated": True,
+        "compatibility_alias_of": TIMEFRAME_DAILY,
+    },
+    TIMEFRAME_MONTHLY: {
+        "macd": {"fast": 8, "slow": 17, "signal": 9},
+        "kd": {"period": 10, "k_smoothing": 4, "d_smoothing": 4},
+        "j_calculated": True,
+        "compatibility_alias_of": TIMEFRAME_DAILY,
+    },
+}
+FUTURE_5K_MACD_CANDIDATES = [
+    {"fast": 8, "slow": 17, "signal": 9},
+    {"fast": 5, "slow": 13, "signal": 8},
+    {"fast": 5, "slow": 34, "signal": 5},
+]
+SWING_STOP_BASELINE_REVIEW_THRESHOLD_PCT = 4.0
+SWING_STOP_BASELINE_WARNING_TEXT = "超過個人波段3–4% Baseline，需人工覆核"
+SWING_STOP_BASELINE_WARNING_CODE = "SWING_STOP_RISK_GT_PERSONAL_BASELINE_REVIEW_REQUIRED"
+A3_OBSERVATION_CATEGORY = "60K起漲雷達【觀察／準備型，非正式進場確認】"
+A5_SIGNAL_PRICE_RULE = "completed_5k_signal_bar_close"
+A5_LEGACY_ENABLED = False
+A5_N_LEDGER_PATH = LEDGER_DIR / "a5n_signal_ledger.jsonl"
+A5_N_RUN_ROWS: list[dict[str, Any]] = []
+
+
+def get_technical_params(timeframe: str) -> dict[str, Any]:
+    key = str(timeframe).strip().lower()
+    if key not in TECH_PARAM_REGISTRY:
+        raise ValueError(f"Unknown indicator timeframe: {timeframe!r}")
+    return TECH_PARAM_REGISTRY[key]
+
+
+def technical_parameter_snapshot() -> dict[str, Any]:
+    return {
+        "registry_version": TECH_PARAM_REGISTRY_VERSION,
+        "active": TECH_PARAM_REGISTRY,
+        "future_candidates": {"5k_macd": FUTURE_5K_MACD_CANDIDATES},
+        "source": "central Technical Parameter Registry",
+    }
+
+
+TECHNICAL_PARAMETER_SNAPSHOT = technical_parameter_snapshot()
+
+
+def ledger_parameter_fields() -> dict[str, Any]:
+    return {
+        "parameter_registry_version": TECH_PARAM_REGISTRY_VERSION,
+        "daily_macd_params": TECH_PARAM_REGISTRY[TIMEFRAME_DAILY]["macd"],
+        "minute60_macd_params": TECH_PARAM_REGISTRY[TIMEFRAME_60K]["macd"],
+        "five_k_macd_params": TECH_PARAM_REGISTRY[TIMEFRAME_5K]["macd"],
+        "daily_kd_params": TECH_PARAM_REGISTRY[TIMEFRAME_DAILY]["kd"],
+        "minute60_kd_params": TECH_PARAM_REGISTRY[TIMEFRAME_60K]["kd"],
+        "five_k_kd_params": TECH_PARAM_REGISTRY[TIMEFRAME_5K]["kd"],
+        "j_calculated": all(bool(v.get("j_calculated")) for v in TECH_PARAM_REGISTRY.values()),
+    }
+
+
+LEDGER_PARAMETER_FIELDS = ledger_parameter_fields()
+LEDGER_CONTEXT: dict[str, Any] = {}
 
 
 def env_str(name: str, default: str = "") -> str:
@@ -76,6 +190,924 @@ def load_env_file(path: str = ".env") -> None:
                 continue
             key, value = line.split("=", 1)
             os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+def now_taipei() -> dt.datetime:
+    return dt.datetime.now(TAIPEI_TZ)
+
+
+def json_safe(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, (str, int, bool)):
+        return value
+    if isinstance(value, float):
+        if pd.isna(value):
+            return None
+        return value
+    if isinstance(value, (dt.datetime, dt.date)):
+        if isinstance(value, dt.datetime) and value.tzinfo is not None:
+            return value.astimezone(TAIPEI_TZ).isoformat()
+        return value.isoformat()
+    if isinstance(value, pd.Timestamp):
+        if pd.isna(value):
+            return None
+        if value.tzinfo is not None:
+            return value.tz_convert(TAIPEI_TZ).isoformat()
+        return value.isoformat()
+    if isinstance(value, pd.Series):
+        return {str(k): json_safe(v) for k, v in value.to_dict().items()}
+    if isinstance(value, dict):
+        return {str(k): json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [json_safe(v) for v in value]
+    try:
+        if pd.isna(value):
+            return None
+    except Exception:
+        pass
+    if hasattr(value, "item"):
+        try:
+            return json_safe(value.item())
+        except Exception:
+            pass
+    return str(value)
+
+
+def append_jsonl_fail_open(path: Path, record: dict[str, Any], ledger_name: str) -> bool:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(json_safe(record), ensure_ascii=False, separators=(",", ":")))
+            fh.write("\n")
+        return True
+    except Exception as exc:
+        print(f"[ledger-warn] {ledger_name} write failed: {exc}", file=sys.stderr)
+        return False
+
+
+def current_code_commit_sha() -> str:
+    github_sha = os.getenv("GITHUB_SHA", "").strip()
+    if github_sha:
+        return github_sha
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return result.stdout.strip()
+    except Exception:
+        return "unknown"
+
+
+def build_execution_context(cfg: "Config", run_mode: str, market: dict[str, Any] | None = None) -> dict[str, Any]:
+    started = now_taipei()
+    github_run_id = os.getenv("GITHUB_RUN_ID", "").strip()
+    github_attempt = os.getenv("GITHUB_RUN_ATTEMPT", "").strip()
+    if github_run_id:
+        execution_id = f"github-{github_run_id}-{github_attempt or '1'}"
+    else:
+        execution_id = f"local-{started.strftime('%Y%m%dT%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
+    if cfg.intraday_alert_only:
+        scheduled_slot_id = f"{cfg_date(cfg)}-intraday-{started.strftime('%H%M')}"
+    elif cfg.only_short_entry:
+        scheduled_slot_id = f"{cfg_date(cfg)}-only-a4"
+    elif cfg.only_prepare_turn:
+        scheduled_slot_id = f"{cfg_date(cfg)}-only-a3"
+    else:
+        scheduled_slot_id = f"{cfg_date(cfg)}-after-close"
+
+    market = market or {}
+    return {
+        "schema_version": LEDGER_SCHEMA_VERSION,
+        "execution_id": execution_id,
+        "scheduled_slot_id": scheduled_slot_id,
+        "run_date": cfg_date(cfg),
+        "run_mode": run_mode,
+        "started_at": started.isoformat(),
+        "report_date": cfg_date(cfg),
+        "code_commit_sha": current_code_commit_sha(),
+        "strategy_version": STRATEGY_VERSION,
+        "strategy_versions": dict(STRATEGY_VERSIONS),
+        "technical_parameters": dict(TECHNICAL_PARAMETER_SNAPSHOT),
+        **LEDGER_PARAMETER_FIELDS,
+        "source_vendor": "FinMind+yfinance",
+        "timezone": "Asia/Taipei",
+        "trigger_source": os.getenv("GITHUB_EVENT_NAME", "local"),
+        "github_workflow": os.getenv("GITHUB_WORKFLOW", ""),
+        "github_run_id": github_run_id,
+        "market_regime": {
+            "label": "allow_intraday" if market.get("ok") else ("blocked_intraday" if market else "unknown"),
+            "raw_features": {
+                "symbol": market.get("symbol"),
+                "daily_pct": market.get("daily_pct"),
+                "intraday_pct": market.get("intraday_pct"),
+                "reason": market.get("reason"),
+                "ok": market.get("ok"),
+            },
+        },
+        "raw_snapshots": [],
+        "event_details": [],
+        "mother_universe_seen": set(),
+        "screened_snapshot_seen": set(),
+        "ledger_stats": {
+            "snapshots_collected": 0,
+            "event_details_collected": 0,
+            "snapshots_written": 0,
+            "event_details_written": 0,
+        },
+    }
+
+
+def reset_ledger_context(cfg: "Config", run_mode: str, market: dict[str, Any] | None = None) -> None:
+    LEDGER_CONTEXT.clear()
+    LEDGER_CONTEXT.update(build_execution_context(cfg, run_mode, market))
+
+
+def latest_feature_snapshot(df: pd.DataFrame, timeframe: str) -> dict[str, Any]:
+    if df is None or df.empty:
+        return {
+            "timeframe": timeframe,
+            "data_quality_flags": ["EMPTY_DATAFRAME"],
+        }
+    enriched = add_indicators(df, timeframe=timeframe)
+    latest = enriched.iloc[-1]
+    index_value = enriched.index[-1] if len(enriched.index) else None
+    return {
+        "timeframe": timeframe,
+        "timestamp": json_safe(index_value),
+        "close": latest.get("close"),
+        "volume": latest.get("volume"),
+        "ma5": latest.get("ma5"),
+        "ma10": latest.get("ma10"),
+        "ma20": latest.get("ma20"),
+        "ma60": latest.get("ma60"),
+        "dif": latest.get("dif"),
+        "macd_signal": latest.get("macd"),
+        "histogram": latest.get("hist"),
+        "k": latest.get("kd_k"),
+        "d": latest.get("kd_d"),
+        "j": latest.get("kd_j"),
+    }
+
+
+def bool_state(value: Any) -> bool:
+    return bool(value) if value is not None else False
+
+
+def pass_reject_codes(states: dict[str, dict[str, Any]], filter_reasons: dict[str, Any]) -> dict[str, list[str]]:
+    codes: dict[str, list[str]] = {}
+    for strategy_id, state in states.items():
+        strategy_codes: list[str] = []
+        if state.get("raw_signal"):
+            strategy_codes.append(f"{strategy_id}_RAW_SIGNAL")
+        else:
+            strategy_codes.append(f"{strategy_id}_NO_RAW_SIGNAL")
+        if state.get("filter_passed"):
+            strategy_codes.append(f"{strategy_id}_FILTER_PASSED")
+        else:
+            strategy_codes.append(f"{strategy_id}_FILTER_FAILED")
+        if state.get("eligible"):
+            strategy_codes.append(f"{strategy_id}_ELIGIBLE")
+        else:
+            strategy_codes.append(f"{strategy_id}_NOT_ELIGIBLE")
+        codes[strategy_id] = strategy_codes
+    if filter_reasons:
+        codes["FILTER_DETAIL"] = [str(item) for item in filter_reasons.get("common", [])]
+    return codes
+
+
+def float_or_none(value: Any) -> float | None:
+    try:
+        if value is None or value == "":
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def stop_risk_exceeds_swing_baseline(value: Any) -> bool:
+    risk = float_or_none(value)
+    return risk is not None and risk > SWING_STOP_BASELINE_REVIEW_THRESHOLD_PCT
+
+
+def append_swing_stop_warning_codes(
+    codes: dict[str, list[str]],
+    states: dict[str, dict[str, Any]],
+    stop: dict[str, Any] | None,
+    relay_stop: dict[str, Any] | None,
+) -> dict[str, list[str]]:
+    """Mark swing candidates whose risk exceeds the user's manual baseline without filtering them."""
+    strategy_stop_risks = {
+        "A1": (stop or {}).get("stop_loss_risk_pct"),
+        "A2": (relay_stop or {}).get("stop_loss_risk_pct"),
+        "A3": (stop or {}).get("stop_loss_risk_pct"),
+        "A4": (stop or {}).get("stop_loss_risk_pct"),
+    }
+    warning_details: list[str] = []
+    for strategy_id, risk in strategy_stop_risks.items():
+        if not states.get(strategy_id, {}).get("eligible"):
+            continue
+        if not stop_risk_exceeds_swing_baseline(risk):
+            continue
+        codes.setdefault(strategy_id, []).append(SWING_STOP_BASELINE_WARNING_CODE)
+        warning_details.append(f"{strategy_id}:{SWING_STOP_BASELINE_WARNING_CODE}")
+    if warning_details:
+        codes.setdefault("WARNING_DETAIL", []).extend(warning_details)
+    return codes
+
+
+def attach_swing_stop_baseline_warning(item: dict[str, Any]) -> dict[str, Any]:
+    if str(item.get("category", "")) == "5K早盤當沖雷達股":
+        return item
+    if not stop_risk_exceeds_swing_baseline(item.get("stop_loss_risk_pct")):
+        return item
+    warnings = list(item.get("manual_review_warnings") or [])
+    if SWING_STOP_BASELINE_WARNING_TEXT not in warnings:
+        warnings.append(SWING_STOP_BASELINE_WARNING_TEXT)
+    item["manual_review_warnings"] = warnings
+    warning_codes = list(item.get("warning_codes") or [])
+    if SWING_STOP_BASELINE_WARNING_CODE not in warning_codes:
+        warning_codes.append(SWING_STOP_BASELINE_WARNING_CODE)
+    item["warning_codes"] = warning_codes
+    return item
+
+
+def collect_mother_universe_snapshots(info: pd.DataFrame) -> None:
+    """Record the pre-volume-filter market mother universe for research completeness."""
+    try:
+        if not LEDGER_CONTEXT:
+            return
+        LEDGER_CONTEXT["mother_universe_count"] = int(len(info))
+        seen = LEDGER_CONTEXT.setdefault("mother_universe_seen", set())
+        base_states: dict[str, dict[str, Any]] = {}
+        for strategy_id, strategy_key in {
+            "A1": "strong_continuation",
+            "A2": "relay_breakout",
+            "A3": "prepare_turn",
+            "A4": "precision_entry",
+            "A5": "extreme_daytrade",
+        }.items():
+            base_states[strategy_id] = {
+                "strategy_key": strategy_key,
+                "raw_signal": False,
+                "filter_passed": None,
+                "eligible": False,
+                "ranked": False,
+                "selected": False,
+                "category_selected": False,
+                "category_excluded_by_top_n": False,
+                "shortlist_selected": False,
+                "deduped_out": False,
+                "selection_status": "not_evaluated",
+                "rank_before_limit": None,
+                "rank_after_limit": None,
+                "strategy_version": STRATEGY_VERSIONS[strategy_id],
+            }
+        for _, row in info.iterrows():
+            stock_id = str(row.get("stock_id", ""))
+            dedupe_key = ("mother_universe", stock_id)
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            record = {
+                "ledger_type": "raw_signal_snapshot",
+                "schema_version": LEDGER_SCHEMA_VERSION,
+                "execution_id": LEDGER_CONTEXT.get("execution_id"),
+                "scheduled_slot_id": LEDGER_CONTEXT.get("scheduled_slot_id"),
+                "run_date": LEDGER_CONTEXT.get("run_date"),
+                "signal_timestamp": now_taipei().isoformat(),
+                "snapshot_stage": "mother_universe",
+                "stock_id": stock_id,
+                "stock_name": row.get("stock_name"),
+                "market_type": row.get("type"),
+                "industry_category": row.get("industry_category"),
+                "strategy_version": STRATEGY_VERSION,
+                "strategy_versions": STRATEGY_VERSIONS,
+                "technical_parameters": TECHNICAL_PARAMETER_SNAPSHOT,
+                **LEDGER_PARAMETER_FIELDS,
+                "strategy_states": base_states,
+                "raw_signal": False,
+                "passed_common_filter": None,
+                "filter_passed": None,
+                "eligible": False,
+                "ranked": False,
+                "selected": False,
+                "category_selected": False,
+                "category_excluded_by_top_n": False,
+                "shortlist_selected": False,
+                "deduped_out": False,
+                "selection_status": "not_evaluated",
+                "rank_before_limit": {},
+                "rank_after_limit": {},
+                "entry_price_rule": None,
+                "stop_price": None,
+                "data_until": None,
+                "last_raw_k_timestamp": None,
+                "last_completed_k_timestamp": None,
+                "kbar_completed_time": None,
+                "forming_k_excluded": None,
+                "source_vendor": "FinMind",
+                "timezone": "Asia/Taipei",
+                "timeframe": "stock_info",
+                "data_quality_flags": ["MOTHER_UNIVERSE_PRE_VOLUME_FILTER"],
+                "market_regime": LEDGER_CONTEXT.get("market_regime"),
+                "current_close": None,
+                "signal_price": None,
+                "volume": None,
+                "ma5": None,
+                "ma10": None,
+                "ma20": None,
+                "ma60": None,
+                "dif": None,
+                "macd_signal": None,
+                "histogram": None,
+                "k": None,
+                "d": None,
+                "j": None,
+                "strategy_score": None,
+                "pass_reject_codes": {
+                    strategy_id: [f"{strategy_id}_NOT_EVALUATED_AT_MOTHER_UNIVERSE_STAGE"]
+                    for strategy_id in base_states
+                },
+                "reject_reason": {"mother_universe": ["NOT_YET_VOLUME_PREFILTERED_OR_STRATEGY_SCREENED"]},
+                "pass_reason": [],
+                "code_commit_sha": LEDGER_CONTEXT.get("code_commit_sha"),
+                "shortlist_rank": None,
+            }
+            collect_raw_signal_snapshot(json_safe(record))
+    except Exception as exc:
+        print(f"[ledger-warn] mother universe snapshot collect failed: {exc}", file=sys.stderr)
+
+
+def collect_raw_signal_snapshot(record: dict[str, Any]) -> None:
+    try:
+        if not LEDGER_CONTEXT:
+            return
+        LEDGER_CONTEXT.setdefault("raw_snapshots", []).append(record)
+        LEDGER_CONTEXT.setdefault("ledger_stats", {})["snapshots_collected"] = len(
+            LEDGER_CONTEXT.get("raw_snapshots", [])
+        )
+    except Exception as exc:
+        print(f"[ledger-warn] snapshot collect failed: {exc}", file=sys.stderr)
+
+
+def collect_signal_event_detail(record: dict[str, Any]) -> None:
+    try:
+        if not LEDGER_CONTEXT:
+            return
+        LEDGER_CONTEXT.setdefault("event_details", []).append(record)
+        LEDGER_CONTEXT.setdefault("ledger_stats", {})["event_details_collected"] = len(
+            LEDGER_CONTEXT.get("event_details", [])
+        )
+    except Exception as exc:
+        print(f"[ledger-warn] event detail collect failed: {exc}", file=sys.stderr)
+
+
+def strategy_state_map(
+    *,
+    filter_ok: bool,
+    relay_filter_ok: bool,
+    precision_filter_ok: bool,
+    reclaim_ok: bool,
+    support_ok: bool,
+    kd_pullback_ok: bool,
+    daily_macd_ok: bool,
+    breakout_ok: bool,
+    daily_prepare_ok: bool,
+    prepare_turn_ok: bool,
+    short_entry_ok: bool,
+    daily_daytrade_ok: bool,
+    daytrade_direction_ok: bool,
+    five_k_ok: bool,
+    intraday_volume_ok: bool,
+    extreme_daytrade_ok: bool,
+) -> dict[str, dict[str, Any]]:
+    states = {
+        "A1": {
+            "strategy_key": "strong_continuation",
+            "raw_signal": bool_state(reclaim_ok or (support_ok and kd_pullback_ok)),
+            "filter_passed": bool_state(filter_ok),
+        },
+        "A2": {
+            "strategy_key": "relay_breakout",
+            "raw_signal": bool_state(daily_macd_ok and breakout_ok),
+            "filter_passed": bool_state(relay_filter_ok),
+        },
+        "A3": {
+            "strategy_key": "prepare_turn",
+            "raw_signal": bool_state(daily_prepare_ok and prepare_turn_ok),
+            "filter_passed": bool_state(filter_ok),
+        },
+        "A4": {
+            "strategy_key": "precision_entry",
+            "raw_signal": bool_state(daily_macd_ok and short_entry_ok),
+            "filter_passed": bool_state(precision_filter_ok),
+        },
+        "A5": {
+            "strategy_key": "extreme_daytrade",
+            "raw_signal": bool_state(daily_daytrade_ok and daytrade_direction_ok and five_k_ok),
+            "filter_passed": bool_state(intraday_volume_ok),
+            "forming_k_excluded": True,
+        },
+    }
+    for strategy_id, state in states.items():
+        if strategy_id == "A5":
+            state["eligible"] = bool_state(extreme_daytrade_ok)
+        else:
+            state["eligible"] = bool_state(state["raw_signal"] and state["filter_passed"])
+        state["ranked"] = False
+        state["selected"] = False
+        state["category_selected"] = False
+        state["category_excluded_by_top_n"] = False
+        state["shortlist_selected"] = False
+        state["deduped_out"] = False
+        state["selection_status"] = "eligible" if state["eligible"] else "not_eligible"
+        state["rank_before_limit"] = None
+        state["rank_after_limit"] = None
+        state["strategy_version"] = STRATEGY_VERSIONS[strategy_id]
+    return states
+
+
+def infer_forming_k_excluded(five_k_info: dict[str, Any]) -> bool | None:
+    raw_last = five_k_info.get("5k_raw_last_timestamp")
+    signal_ts = five_k_info.get("5k_signal_timestamp")
+    cutoff = five_k_info.get("5k_completed_cutoff")
+    if raw_last and signal_ts:
+        return str(raw_last) != str(signal_ts)
+    if cutoff and signal_ts:
+        return True
+    return None
+
+
+def collect_stock_ledgers(
+    *,
+    row: pd.Series,
+    cfg: "Config",
+    daily: pd.DataFrame,
+    intraday: pd.DataFrame | None,
+    states: dict[str, dict[str, Any]],
+    stop: dict[str, Any] | None,
+    relay_stop: dict[str, Any] | None,
+    filter_reasons: list[str],
+    relay_filter_reasons: list[str],
+    precision_filter_reasons: list[str],
+    five_k_info: dict[str, Any],
+    prepare_turn_info: dict[str, Any],
+    short_entry_reason: str,
+    prepare_turn_reason: str,
+    extreme_daytrade_info: dict[str, Any],
+    data_quality_flags: list[str] | None = None,
+) -> None:
+    try:
+        if not LEDGER_CONTEXT:
+            return
+        stock_id = str(row.get("stock_id", ""))
+        seen = LEDGER_CONTEXT.setdefault("screened_snapshot_seen", set())
+        dedupe_key = ("screened", stock_id)
+        if dedupe_key in seen:
+            return
+        seen.add(dedupe_key)
+        daily_features = latest_feature_snapshot(daily, "daily")
+        intraday_features = latest_feature_snapshot(intraday, "60k") if intraday is not None and not intraday.empty else {}
+        forming_k_excluded = infer_forming_k_excluded(five_k_info)
+        quality_flags = list(data_quality_flags or [])
+        if forming_k_excluded is None:
+            quality_flags.append("FIVE_K_COMPLETION_STATUS_UNKNOWN")
+        elif forming_k_excluded:
+            quality_flags.append("FORMING_5K_EXCLUDED")
+        else:
+            quality_flags.append("LATEST_5K_WAS_COMPLETED_SIGNAL_BAR")
+        if intraday is None or intraday.empty:
+            quality_flags.append("NO_60K_DATA")
+        codes = pass_reject_codes(
+            states,
+            {
+                "common": filter_reasons,
+                "relay": relay_filter_reasons,
+                "precision": precision_filter_reasons,
+            },
+        )
+        append_swing_stop_warning_codes(codes, states, stop, relay_stop)
+        warning_codes = sorted(
+            {
+                code
+                for per_strategy_codes in codes.values()
+                for code in per_strategy_codes
+                if code == SWING_STOP_BASELINE_WARNING_CODE
+            }
+        )
+
+        snapshot = {
+            "ledger_type": "raw_signal_snapshot",
+            "schema_version": LEDGER_SCHEMA_VERSION,
+            "execution_id": LEDGER_CONTEXT.get("execution_id"),
+            "scheduled_slot_id": LEDGER_CONTEXT.get("scheduled_slot_id"),
+            "run_date": cfg_date(cfg),
+            "signal_timestamp": now_taipei().isoformat(),
+            "snapshot_stage": "screened",
+            "stock_id": stock_id,
+            "stock_name": str(row.get("stock_name", "")),
+            "market_type": str(row.get("type", "")),
+            "industry_category": str(row.get("industry_category", "") or ""),
+            "strategy_version": STRATEGY_VERSION,
+            "strategy_versions": dict(STRATEGY_VERSIONS),
+            "technical_parameters": dict(TECHNICAL_PARAMETER_SNAPSHOT),
+            **LEDGER_PARAMETER_FIELDS,
+            "strategy_states": states,
+            "raw_signal": any(bool(state.get("raw_signal")) for state in states.values()),
+            "passed_common_filter": bool(states["A1"].get("filter_passed")),
+            "filter_passed": any(bool(state.get("filter_passed")) for state in states.values()),
+            "eligible": any(bool(state.get("eligible")) for state in states.values()),
+            "ranked": False,
+            "selected": False,
+            "category_selected": False,
+            "category_excluded_by_top_n": False,
+            "shortlist_selected": False,
+            "deduped_out": False,
+            "selection_status": "not_selected_yet",
+            "rank_before_limit": {},
+            "rank_after_limit": {},
+            "entry_price_rule": "latest_daily_close",
+            "stop_price": (stop or {}).get("stop_loss"),
+            "relay_stop_price": (relay_stop or {}).get("stop_loss"),
+            "data_until": cfg_date(cfg),
+            "last_raw_k_timestamp": five_k_info.get("5k_raw_last_timestamp") or intraday_features.get("timestamp"),
+            "last_completed_k_timestamp": five_k_info.get("5k_signal_timestamp") or intraday_features.get("timestamp"),
+            "kbar_completed_time": five_k_info.get("5k_signal_timestamp"),
+            "forming_k_excluded": forming_k_excluded,
+            "source_vendor": "yfinance+FinMind",
+            "timezone": "Asia/Taipei",
+            "timeframe": "daily/60k/5k",
+            "data_quality_flags": quality_flags,
+            "market_regime": LEDGER_CONTEXT.get("market_regime"),
+            "daily": daily_features,
+            "minute60": intraday_features,
+            "five_k": {
+                "raw_last_timestamp": five_k_info.get("5k_raw_last_timestamp"),
+                "completed_cutoff": five_k_info.get("5k_completed_cutoff"),
+                "signal_timestamp": five_k_info.get("5k_signal_timestamp"),
+                "previous_timestamp": five_k_info.get("5k_previous_timestamp"),
+                "above_ema5": five_k_info.get("5k_above_ema5"),
+                "golden_cross": five_k_info.get("5k_golden_cross"),
+                "hist_contracting_2": five_k_info.get("5k_hist_contracting_2"),
+                "hist_turn_red": five_k_info.get("5k_hist_turn_red"),
+                "dif_turning_up": five_k_info.get("5k_dif_turning_up"),
+                "signal_open": five_k_info.get("5k_signal_open"),
+                "signal_high": five_k_info.get("5k_signal_high"),
+                "signal_low": five_k_info.get("5k_signal_low"),
+                "signal_close": five_k_info.get("5k_signal_close"),
+                "signal_ema5": five_k_info.get("5k_signal_ema5"),
+                "signal_dif": five_k_info.get("5k_signal_dif"),
+                "signal_macd": five_k_info.get("5k_signal_macd"),
+                "signal_histogram": five_k_info.get("5k_signal_histogram"),
+                "previous_close": five_k_info.get("5k_previous_close"),
+                "previous_dif": five_k_info.get("5k_previous_dif"),
+                "previous_macd": five_k_info.get("5k_previous_macd"),
+                "previous_histogram": five_k_info.get("5k_previous_histogram"),
+                "stop_price": five_k_info.get("5k_stop_price"),
+                "stop_risk_pct": five_k_info.get("5k_stop_risk_pct"),
+                "stop_risk_basis": five_k_info.get("5k_stop_risk_basis"),
+            },
+            "current_close": daily_features.get("close"),
+            "signal_price": daily_features.get("close"),
+            "volume": row.get("Trading_Volume"),
+            "ma5": daily_features.get("ma5"),
+            "ma10": daily_features.get("ma10"),
+            "ma20": daily_features.get("ma20"),
+            "ma60": daily_features.get("ma60"),
+            "dif": daily_features.get("dif"),
+            "macd_signal": daily_features.get("macd_signal"),
+            "histogram": daily_features.get("histogram"),
+            "k": daily_features.get("k"),
+            "d": daily_features.get("d"),
+            "j": daily_features.get("j"),
+            "strategy_score": None,
+            "pass_reject_codes": codes,
+            "warning_codes": warning_codes,
+            "reject_reason": {
+                "common": filter_reasons,
+                "relay": relay_filter_reasons,
+                "precision": precision_filter_reasons,
+            },
+            "pass_reason": [],
+            "code_commit_sha": LEDGER_CONTEXT.get("code_commit_sha"),
+        }
+        collect_raw_signal_snapshot(snapshot)
+
+        for strategy_id, state in states.items():
+            if not (state.get("raw_signal") or state.get("eligible")):
+                continue
+            if strategy_id == "A5":
+                a5_signal_price = five_k_info.get("5k_signal_close") or snapshot["signal_price"]
+                a5_stop_price = (
+                    five_k_info.get("5k_stop_price")
+                    or five_k_info.get("open_low_stop")
+                    or snapshot["stop_price"]
+                )
+                a5_stop_risk = (
+                    five_k_info.get("5k_stop_risk_pct")
+                    or five_k_info.get("open_low_stop_risk_pct")
+                )
+                strategy_overrides = {
+                    "entry_price_rule": A5_SIGNAL_PRICE_RULE,
+                    "stop_price": a5_stop_price,
+                    "stop_loss_risk_pct": a5_stop_risk,
+                    "current_close": a5_signal_price,
+                    "signal_price": a5_signal_price,
+                    "last_completed_k_timestamp": five_k_info.get("5k_signal_timestamp"),
+                    "kbar_completed_time": five_k_info.get("5k_signal_timestamp"),
+                    "timeframe": "5k",
+                }
+            else:
+                strategy_overrides = {}
+            detail = {
+                **snapshot,
+                **strategy_overrides,
+                "ledger_type": "signal_event_detail",
+                "strategy_id": strategy_id,
+                "strategy_key": state.get("strategy_key"),
+                "strategy_version": state.get("strategy_version"),
+                "raw_signal": state.get("raw_signal"),
+                "filter_passed": state.get("filter_passed"),
+                "eligible": state.get("eligible"),
+                "ranked": False,
+                "selected": False,
+                "category_selected": False,
+                "category_excluded_by_top_n": False,
+                "shortlist_selected": False,
+                "deduped_out": False,
+                "selection_status": "not_selected_yet",
+                "rank_before_limit": None,
+                "rank_after_limit": None,
+                "event_detail": {
+                    "short_entry_reason": short_entry_reason,
+                    "prepare_turn_reason": prepare_turn_reason,
+                    "prepare_turn_info": prepare_turn_info,
+                    "extreme_daytrade_info": extreme_daytrade_info,
+                    "a5_signal_price_consistency": {
+                        "raw_5k_timestamp": five_k_info.get("5k_raw_last_timestamp"),
+                        "completed_cutoff": five_k_info.get("5k_completed_cutoff"),
+                        "completed_signal_timestamp": five_k_info.get("5k_signal_timestamp"),
+                        "signal_bar_close": five_k_info.get("5k_signal_close"),
+                        "stop_price": five_k_info.get("5k_stop_price")
+                        or five_k_info.get("open_low_stop"),
+                        "stop_risk_pct": five_k_info.get("5k_stop_risk_pct")
+                        or five_k_info.get("open_low_stop_risk_pct"),
+                        "stop_risk_basis": five_k_info.get("5k_stop_risk_basis"),
+                    }
+                    if strategy_id == "A5"
+                    else None,
+                },
+            }
+            collect_signal_event_detail(detail)
+    except Exception as exc:
+        print(f"[ledger-warn] stock ledger collect failed: {exc}", file=sys.stderr)
+
+
+def collect_stock_failure_snapshot(
+    row: pd.Series,
+    cfg: "Config",
+    *,
+    stage: str,
+    error_text: str,
+) -> None:
+    try:
+        if not LEDGER_CONTEXT:
+            return
+        states = strategy_state_map(
+            filter_ok=False,
+            relay_filter_ok=False,
+            precision_filter_ok=False,
+            reclaim_ok=False,
+            support_ok=False,
+            kd_pullback_ok=False,
+            daily_macd_ok=False,
+            breakout_ok=False,
+            daily_prepare_ok=False,
+            prepare_turn_ok=False,
+            short_entry_ok=False,
+            daily_daytrade_ok=False,
+            daytrade_direction_ok=False,
+            five_k_ok=False,
+            intraday_volume_ok=False,
+            extreme_daytrade_ok=False,
+        )
+        collect_stock_ledgers(
+            row=row,
+            cfg=cfg,
+            daily=pd.DataFrame(),
+            intraday=None,
+            states=states,
+            stop=None,
+            relay_stop=None,
+            filter_reasons=[stage, "DATA_UNAVAILABLE"],
+            relay_filter_reasons=[stage, "DATA_UNAVAILABLE"],
+            precision_filter_reasons=[stage, "DATA_UNAVAILABLE"],
+            five_k_info={},
+            prepare_turn_info={},
+            short_entry_reason="",
+            prepare_turn_reason="",
+            extreme_daytrade_info={},
+            data_quality_flags=[stage, "STOCK_SCREEN_EXCEPTION", f"ERROR:{error_text[:180]}"],
+        )
+    except Exception as exc:
+        print(f"[ledger-warn] failure snapshot collect failed: {exc}", file=sys.stderr)
+
+
+def annotate_ledger_prelimit_rank(strategy_key: str, rows: list[dict[str, Any]]) -> None:
+    try:
+        strategy_id = STRATEGY_KEY_TO_ID.get(strategy_key)
+        if not strategy_id or not LEDGER_CONTEXT:
+            return
+        ranks = {str(item.get("stock_id")): rank for rank, item in enumerate(rows, start=1)}
+        for snapshot in LEDGER_CONTEXT.get("raw_snapshots", []):
+            stock_id = str(snapshot.get("stock_id"))
+            if stock_id in ranks:
+                snapshot.setdefault("rank_before_limit", {})[strategy_id] = ranks[stock_id]
+                snapshot["ranked"] = True
+                if strategy_id in snapshot.get("strategy_states", {}):
+                    snapshot["strategy_states"][strategy_id]["ranked"] = True
+                    snapshot["strategy_states"][strategy_id]["rank_before_limit"] = ranks[stock_id]
+        for detail in LEDGER_CONTEXT.get("event_details", []):
+            if detail.get("strategy_id") == strategy_id and str(detail.get("stock_id")) in ranks:
+                detail["rank_before_limit"] = ranks[str(detail.get("stock_id"))]
+                detail["ranked"] = True
+    except Exception as exc:
+        print(f"[ledger-warn] prelimit rank annotate failed: {exc}", file=sys.stderr)
+
+
+def flush_signal_ledgers(results: dict[str, list[dict[str, Any]]]) -> None:
+    try:
+        if not LEDGER_CONTEXT or LEDGER_CONTEXT.get("signal_ledgers_flushed"):
+            return
+        selected: dict[tuple[str, str], int] = {}
+        shortlist_ranks: dict[str, int] = {}
+        shortlist_strategy_ids: dict[str, list[str]] = {}
+        shortlist_primary_strategy: dict[str, str] = {}
+        for strategy_key, rows in results.items():
+            if strategy_key == "shortlist":
+                continue
+            strategy_id = STRATEGY_KEY_TO_ID.get(strategy_key)
+            if not strategy_id:
+                continue
+            for rank, item in enumerate(rows, start=1):
+                selected[(strategy_id, str(item.get("stock_id")))] = rank
+        for rank, item in enumerate(results.get("shortlist", []), start=1):
+            stock_id = str(item.get("stock_id"))
+            shortlist_ranks[stock_id] = rank
+            strategy_ids = [
+                STRATEGY_KEY_TO_ID[key]
+                for key in item.get("category_keys", [])
+                if key in STRATEGY_KEY_TO_ID
+            ]
+            shortlist_strategy_ids[stock_id] = strategy_ids
+            if strategy_ids:
+                shortlist_primary_strategy[stock_id] = strategy_ids[0]
+
+        snapshots = LEDGER_CONTEXT.get("raw_snapshots", [])
+        event_details = LEDGER_CONTEXT.get("event_details", [])
+        for snapshot in snapshots:
+            if snapshot.get("snapshot_stage") != "screened":
+                append_jsonl_fail_open(RAW_SIGNAL_SNAPSHOT_LEDGER_PATH, snapshot, "raw_signal_snapshot_ledger")
+                continue
+            stock_id = str(snapshot.get("stock_id"))
+            rank_after: dict[str, int] = {}
+            deduped_any = False
+            top_n_excluded_any = False
+            shortlist_selected_any = False
+            for strategy_id in STRATEGY_VERSIONS:
+                selected_rank = selected.get((strategy_id, stock_id))
+                state = snapshot.get("strategy_states", {}).get(strategy_id)
+                rank_before = None
+                if state:
+                    rank_before = state.get("rank_before_limit")
+                if selected_rank is not None:
+                    rank_after[strategy_id] = selected_rank
+                    if state:
+                        state["selected"] = True
+                        state["category_selected"] = True
+                        state["rank_after_limit"] = selected_rank
+                        state["selection_status"] = "category_selected"
+                elif rank_before is not None:
+                    top_n_excluded_any = True
+                    if state:
+                        state["category_excluded_by_top_n"] = True
+                        state["selection_status"] = "category_excluded_by_top_n"
+
+                if stock_id in shortlist_ranks and strategy_id in shortlist_strategy_ids.get(stock_id, []):
+                    if shortlist_primary_strategy.get(stock_id) == strategy_id:
+                        shortlist_selected_any = True
+                        if state:
+                            state["shortlist_selected"] = True
+                            state["selection_status"] = "shortlist_selected"
+                    else:
+                        deduped_any = True
+                        if state:
+                            state["deduped_out"] = True
+                            state["selection_status"] = "deduped_out_by_shortlist_stock_dedupe"
+            snapshot["rank_after_limit"] = rank_after
+            snapshot["selected"] = bool(rank_after)
+            snapshot["shortlist_rank"] = shortlist_ranks.get(stock_id)
+            snapshot["shortlist_selected"] = shortlist_selected_any
+            snapshot["category_excluded_by_top_n"] = top_n_excluded_any
+            snapshot["deduped_out"] = deduped_any
+            if deduped_any:
+                snapshot["selection_status"] = "deduped_out_by_shortlist_stock_dedupe"
+            elif shortlist_selected_any:
+                snapshot["selection_status"] = "shortlist_selected"
+            elif bool(rank_after):
+                snapshot["selection_status"] = "category_selected"
+            elif top_n_excluded_any:
+                snapshot["selection_status"] = "category_excluded_by_top_n"
+            else:
+                snapshot["selection_status"] = "not_selected"
+            append_jsonl_fail_open(RAW_SIGNAL_SNAPSHOT_LEDGER_PATH, snapshot, "raw_signal_snapshot_ledger")
+
+        for detail in event_details:
+            stock_id = str(detail.get("stock_id"))
+            strategy_id = str(detail.get("strategy_id"))
+            selected_rank = selected.get((strategy_id, stock_id))
+            if selected_rank is not None:
+                detail["selected"] = True
+                detail["category_selected"] = True
+                detail["rank_after_limit"] = selected_rank
+                detail["selection_status"] = "category_selected"
+            elif detail.get("rank_before_limit") is not None:
+                detail["category_excluded_by_top_n"] = True
+                detail["selection_status"] = "category_excluded_by_top_n"
+            detail["shortlist_rank"] = shortlist_ranks.get(stock_id)
+            if stock_id in shortlist_ranks and strategy_id in shortlist_strategy_ids.get(stock_id, []):
+                if shortlist_primary_strategy.get(stock_id) == strategy_id:
+                    detail["shortlist_selected"] = True
+                    detail["selection_status"] = "shortlist_selected"
+                else:
+                    detail["deduped_out"] = True
+                    detail["selection_status"] = "deduped_out_by_shortlist_stock_dedupe"
+            append_jsonl_fail_open(SIGNAL_EVENT_DETAIL_LEDGER_PATH, detail, "signal_event_detail_ledger")
+
+        LEDGER_CONTEXT["signal_ledgers_flushed"] = True
+        stats = LEDGER_CONTEXT.setdefault("ledger_stats", {})
+        stats["snapshots_written"] = len(snapshots)
+        stats["event_details_written"] = len(event_details)
+    except Exception as exc:
+        print(f"[ledger-warn] signal ledger flush failed: {exc}", file=sys.stderr)
+
+
+def write_run_ledger(
+    *,
+    cfg: "Config",
+    status: str,
+    universe_count: int,
+    active_keys: list[str],
+    error_text: str | None = None,
+) -> None:
+    try:
+        if not LEDGER_CONTEXT:
+            return
+        finished = now_taipei()
+        started_raw = LEDGER_CONTEXT.get("started_at")
+        duration_sec = None
+        if started_raw:
+            try:
+                started = dt.datetime.fromisoformat(str(started_raw))
+                duration_sec = (finished - started).total_seconds()
+            except Exception:
+                duration_sec = None
+        record = {
+            "ledger_type": "run",
+            "schema_version": LEDGER_SCHEMA_VERSION,
+            "execution_id": LEDGER_CONTEXT.get("execution_id"),
+            "scheduled_slot_id": LEDGER_CONTEXT.get("scheduled_slot_id"),
+            "run_date": cfg_date(cfg),
+            "run_mode": LEDGER_CONTEXT.get("run_mode"),
+            "status": status,
+            "started_at": LEDGER_CONTEXT.get("started_at"),
+            "finished_at": finished.isoformat(),
+            "duration_sec": duration_sec,
+            "code_commit_sha": LEDGER_CONTEXT.get("code_commit_sha"),
+            "strategy_version": STRATEGY_VERSION,
+            "strategy_versions": dict(STRATEGY_VERSIONS),
+            "technical_parameters": dict(TECHNICAL_PARAMETER_SNAPSHOT),
+            **LEDGER_PARAMETER_FIELDS,
+            "active_strategy_keys": active_keys,
+            "mother_universe_count": LEDGER_CONTEXT.get("mother_universe_count"),
+            "screened_universe_count": universe_count,
+            "universe_count": universe_count,
+            "source_vendor": LEDGER_CONTEXT.get("source_vendor"),
+            "timezone": LEDGER_CONTEXT.get("timezone"),
+            "market_regime": LEDGER_CONTEXT.get("market_regime"),
+            "ledger_stats": LEDGER_CONTEXT.get("ledger_stats", {}),
+            "error": error_text,
+            "quality_flags": ["LEDGER_FAIL_OPEN"],
+        }
+        append_jsonl_fail_open(RUN_LEDGER_PATH, record, "run_ledger")
+    except Exception as exc:
+        print(f"[ledger-warn] run ledger failed: {exc}", file=sys.stderr)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -330,6 +1362,50 @@ def get_yahoo_5m_intraday(
     return filter_by_report_date(out, cfg) if cfg else out
 
 
+def completed_5m_cutoff(as_of: dt.datetime | pd.Timestamp | None = None) -> pd.Timestamp:
+    """Return the latest Yahoo 5m bar start that should be fully closed in Taiwan time."""
+    if as_of is None:
+        now = dt.datetime.now(TAIPEI_TZ)
+    else:
+        ts = pd.Timestamp(as_of)
+        if ts.tzinfo is None:
+            now = ts.to_pydatetime().replace(tzinfo=TAIPEI_TZ)
+        else:
+            now = ts.tz_convert(TAIPEI_TZ).to_pydatetime()
+    naive_now = pd.Timestamp(now.replace(tzinfo=None))
+    return naive_now.floor("5min") - pd.Timedelta(minutes=5)
+
+
+def keep_completed_5m_bars(
+    five_min: pd.DataFrame,
+    *,
+    as_of: dt.datetime | pd.Timestamp | None = None,
+) -> pd.DataFrame:
+    if five_min.empty or "date" not in five_min.columns:
+        return five_min
+    out = five_min.copy()
+    out["date"] = pd.to_datetime(out["date"], errors="coerce")
+    if getattr(out["date"].dt, "tz", None) is not None:
+        out["date"] = out["date"].dt.tz_convert(TAIPEI_TZ).dt.tz_localize(None)
+    if out["date"].dropna().empty:
+        return out.iloc[0:0].copy()
+    latest_day = out["date"].dropna().max().date()
+    today = dt.datetime.now(TAIPEI_TZ).date()
+    if as_of is not None:
+        as_of_ts = pd.Timestamp(as_of)
+        latest_as_of = (
+            as_of_ts.tz_convert(TAIPEI_TZ).date()
+            if as_of_ts.tzinfo is not None
+            else as_of_ts.date()
+        )
+    else:
+        latest_as_of = today
+    if latest_day != latest_as_of:
+        return out.sort_values("date")
+    cutoff = completed_5m_cutoff(as_of)
+    return out[out["date"] <= cutoff].sort_values("date")
+
+
 def taiwan_60k_slot(ts: pd.Timestamp) -> pd.Timestamp | None:
     t = ts.time()
     if t < dt.time(9, 0) or t > dt.time(13, 30):
@@ -410,7 +1486,10 @@ def intraday_session_is_current(kbar: pd.DataFrame, cfg: Config, min_bars: int =
     return len(today_bars) >= max(1, required_bars)
 
 
-def add_indicators(df: pd.DataFrame, atr_period: int = 14) -> pd.DataFrame:
+def add_indicators(df: pd.DataFrame, timeframe: str, atr_period: int = 14) -> pd.DataFrame:
+    params = get_technical_params(timeframe)
+    macd_params = params["macd"]
+    kd_params = params["kd"]
     out = df.copy()
     close = out["close"].astype(float)
     high = out["max"].astype(float)
@@ -425,15 +1504,19 @@ def add_indicators(df: pd.DataFrame, atr_period: int = 14) -> pd.DataFrame:
     out["ma20"] = close.rolling(20).mean()
     out["ma60"] = close.rolling(60).mean()
     out["atr"] = true_range.rolling(atr_period).mean()
-    low9 = low.rolling(9).min()
-    high9 = high.rolling(9).max()
-    rsv = (close - low9) / (high9 - low9) * 100
-    out["kd_k"] = rsv.ewm(alpha=1 / 3, adjust=False).mean()
-    out["kd_d"] = out["kd_k"].ewm(alpha=1 / 3, adjust=False).mean()
-    ema12 = close.ewm(span=12, adjust=False).mean()
-    ema26 = close.ewm(span=26, adjust=False).mean()
-    out["dif"] = ema12 - ema26
-    out["macd"] = out["dif"].ewm(span=9, adjust=False).mean()
+    kd_period = int(kd_params["period"])
+    k_smoothing = int(kd_params["k_smoothing"])
+    d_smoothing = int(kd_params["d_smoothing"])
+    rolling_low = low.rolling(kd_period).min()
+    rolling_high = high.rolling(kd_period).max()
+    rsv = (close - rolling_low) / (rolling_high - rolling_low) * 100
+    out["kd_k"] = rsv.ewm(alpha=1 / k_smoothing, adjust=False).mean()
+    out["kd_d"] = out["kd_k"].ewm(alpha=1 / d_smoothing, adjust=False).mean()
+    out["kd_j"] = 3 * out["kd_k"] - 2 * out["kd_d"]
+    ema_fast = close.ewm(span=int(macd_params["fast"]), adjust=False).mean()
+    ema_slow = close.ewm(span=int(macd_params["slow"]), adjust=False).mean()
+    out["dif"] = ema_fast - ema_slow
+    out["macd"] = out["dif"].ewm(span=int(macd_params["signal"]), adjust=False).mean()
     out["hist"] = out["dif"] - out["macd"]
     std20 = close.rolling(20).std()
     out["bb_upper"] = out["ma20"] + 2 * std20
@@ -482,10 +1565,10 @@ def resample_ohlcv(df: pd.DataFrame, rule: str) -> pd.DataFrame:
     return resampled.dropna(subset=["close"]).reset_index()
 
 
-def trend_and_macd_ok(df: pd.DataFrame) -> bool:
+def trend_and_macd_ok(df: pd.DataFrame, timeframe: str = TIMEFRAME_DAILY) -> bool:
     if len(df) < 60:
         return False
-    latest = add_indicators(df).iloc[-1]
+    latest = add_indicators(df, timeframe=timeframe).iloc[-1]
     values = latest[["ma5", "ma20", "ma60", "dif", "macd"]]
     if values.isna().any():
         return False
@@ -496,20 +1579,20 @@ def trend_and_macd_ok(df: pd.DataFrame) -> bool:
     )
 
 
-def ma_alignment_ok(df: pd.DataFrame) -> bool:
+def ma_alignment_ok(df: pd.DataFrame, timeframe: str = TIMEFRAME_DAILY) -> bool:
     if len(df) < 60:
         return False
-    latest = add_indicators(df).iloc[-1]
+    latest = add_indicators(df, timeframe=timeframe).iloc[-1]
     values = latest[["ma5", "ma20", "ma60"]]
     if values.isna().any():
         return False
     return bool(latest["ma5"] > latest["ma20"] > latest["ma60"])
 
 
-def macd_above_zero_ok(df: pd.DataFrame) -> bool:
+def macd_above_zero_ok(df: pd.DataFrame, timeframe: str = TIMEFRAME_DAILY) -> bool:
     if len(df) < 35:
         return False
-    latest = add_indicators(df).iloc[-1]
+    latest = add_indicators(df, timeframe=timeframe).iloc[-1]
     values = latest[["dif", "macd"]]
     if values.isna().any():
         return False
@@ -519,16 +1602,20 @@ def macd_above_zero_ok(df: pd.DataFrame) -> bool:
 def all_ma_alignment_ok(daily: pd.DataFrame) -> bool:
     weekly = resample_ohlcv(daily, "W-FRI")
     monthly = resample_ohlcv(daily, "ME")
-    return ma_alignment_ok(daily) and ma_alignment_ok(weekly) and ma_alignment_ok(monthly)
+    return (
+        ma_alignment_ok(daily, timeframe=TIMEFRAME_DAILY)
+        and ma_alignment_ok(weekly, timeframe=TIMEFRAME_WEEKLY)
+        and ma_alignment_ok(monthly, timeframe=TIMEFRAME_MONTHLY)
+    )
 
 
 def all_macd_above_zero_ok(daily: pd.DataFrame) -> bool:
     weekly = resample_ohlcv(daily, "W-FRI")
     monthly = resample_ohlcv(daily, "ME")
     return (
-        macd_above_zero_ok(daily)
-        and macd_above_zero_ok(weekly)
-        and macd_above_zero_ok(monthly)
+        macd_above_zero_ok(daily, timeframe=TIMEFRAME_DAILY)
+        and macd_above_zero_ok(weekly, timeframe=TIMEFRAME_WEEKLY)
+        and macd_above_zero_ok(monthly, timeframe=TIMEFRAME_MONTHLY)
     )
 
 
@@ -536,14 +1623,14 @@ def all_big_timeframes_ok(daily: pd.DataFrame) -> bool:
     weekly = resample_ohlcv(daily, "W-FRI")
     monthly = resample_ohlcv(daily, "ME")
     return (
-        trend_and_macd_ok(daily)
-        and trend_and_macd_ok(weekly)
-        and trend_and_macd_ok(monthly)
+        trend_and_macd_ok(daily, timeframe=TIMEFRAME_DAILY)
+        and trend_and_macd_ok(weekly, timeframe=TIMEFRAME_WEEKLY)
+        and trend_and_macd_ok(monthly, timeframe=TIMEFRAME_MONTHLY)
     )
 
 
 def calculate_stop_loss(daily: pd.DataFrame, cfg: Config) -> dict[str, Any]:
-    ind = add_indicators(daily, cfg.atr_period)
+    ind = add_indicators(daily, timeframe=TIMEFRAME_DAILY, atr_period=cfg.atr_period)
     latest = ind.iloc[-1]
     close = float(latest["close"])
     buffer = cfg.stop_loss_buffer_pct / 100
@@ -580,7 +1667,7 @@ def calculate_stop_loss(daily: pd.DataFrame, cfg: Config) -> dict[str, Any]:
 
 def calculate_relay_stop_loss(daily: pd.DataFrame, cfg: Config) -> dict[str, Any]:
     """Second-category structural stop: breakout point or red-candle midpoint."""
-    ind = add_indicators(daily, cfg.atr_period)
+    ind = add_indicators(daily, timeframe=TIMEFRAME_DAILY, atr_period=cfg.atr_period)
     if len(ind) < 25:
         return calculate_stop_loss(daily, cfg)
     latest = ind.iloc[-1]
@@ -647,7 +1734,7 @@ def intraday_entry_ok(kbar: pd.DataFrame) -> bool:
     )
     if len(hourly) < 35:
         return False
-    ind = add_indicators(hourly)
+    ind = add_indicators(hourly, timeframe=TIMEFRAME_60K)
     tail = ind.tail(4)
     latest = tail.iloc[-1]
     if pd.isna(latest["dif"]) or pd.isna(latest["macd"]):
@@ -688,7 +1775,7 @@ def intraday_short_entry_signal(kbar: pd.DataFrame) -> tuple[bool, str, int]:
     )
     if len(hourly) < 35:
         return False, "", 0
-    ind = add_indicators(hourly)
+    ind = add_indicators(hourly, timeframe=TIMEFRAME_60K)
     tail = ind.tail(4)
     if tail[["dif", "macd", "hist"]].isna().any().any():
         return False, "", 0
@@ -720,14 +1807,14 @@ def intraday_short_entry_signal(kbar: pd.DataFrame) -> tuple[bool, str, int]:
 
 
 def daily_common_gate(daily: pd.DataFrame) -> bool:
-    return macd_above_zero_ok(daily)
+    return macd_above_zero_ok(daily, timeframe=TIMEFRAME_DAILY)
 
 
 def daily_trend_protection_ok(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
     info: dict[str, Any] = {}
     if len(daily) < 65:
         return False, info
-    ind = add_indicators(daily)
+    ind = add_indicators(daily, timeframe=TIMEFRAME_DAILY)
     latest = ind.iloc[-1]
     required = ["close", "ma5", "ma10", "ma20", "ma60", "dif", "macd", "hist"]
     if latest[required].isna().any():
@@ -757,7 +1844,7 @@ def daily_prepare_turn_gate_ok(daily: pd.DataFrame) -> tuple[bool, dict[str, Any
     info: dict[str, Any] = {}
     if len(daily) < 25:
         return False, info
-    ind = add_indicators(daily)
+    ind = add_indicators(daily, timeframe=TIMEFRAME_DAILY)
     latest = ind.iloc[-1]
     previous = ind.iloc[-2]
     required = ["close", "ma5", "ma10", "ma20", "dif", "macd", "hist"]
@@ -792,7 +1879,7 @@ def daily_prepare_turn_gate_ok(daily: pd.DataFrame) -> tuple[bool, dict[str, Any
 
 def weekly_macd_above_zero_from_daily(daily: pd.DataFrame) -> bool:
     weekly = resample_ohlcv(daily, "W-FRI")
-    return macd_above_zero_ok(weekly)
+    return macd_above_zero_ok(weekly, timeframe=TIMEFRAME_WEEKLY)
 
 
 def daily_ma_cluster_breakout_info(daily: pd.DataFrame) -> dict[str, Any]:
@@ -804,7 +1891,7 @@ def daily_ma_cluster_breakout_info(daily: pd.DataFrame) -> dict[str, Any]:
     }
     if len(daily) < 25:
         return info
-    ind = add_indicators(daily)
+    ind = add_indicators(daily, timeframe=TIMEFRAME_DAILY)
     latest = ind.iloc[-1]
     required = ["close", "ma5", "ma10", "ma20"]
     if latest[required].isna().any():
@@ -832,7 +1919,7 @@ def daily_daytrade_protection_ok(daily: pd.DataFrame) -> tuple[bool, dict[str, A
     info: dict[str, Any] = {}
     if len(daily) < 65:
         return False, info
-    ind = add_indicators(daily)
+    ind = add_indicators(daily, timeframe=TIMEFRAME_DAILY)
     latest = ind.iloc[-1]
     previous = ind.iloc[-2]
     required = ["close", "ma5", "ma10", "dif", "macd"]
@@ -867,7 +1954,7 @@ def intraday_60k_daytrade_direction_ok(kbar: pd.DataFrame) -> tuple[bool, dict[s
         return True, info
     if kbar.empty:
         return False, info
-    ind = add_indicators(kbar)
+    ind = add_indicators(kbar, timeframe=TIMEFRAME_60K)
     tail = ind.tail(5)
     required = ["close", "ma5", "ma10", "dif", "macd", "hist"]
     if len(tail) < 5 or tail[required].isna().any().any():
@@ -894,7 +1981,11 @@ def intraday_60k_daytrade_direction_ok(kbar: pd.DataFrame) -> tuple[bool, dict[s
     return bool(above_ma5_or_ma10 and (hist_contracting or dif_turning_up or above_zero)), info
 
 
-def intraday_5k_daytrade_signal(five_min: pd.DataFrame) -> tuple[bool, str, int, dict[str, Any]]:
+def intraday_5k_daytrade_signal_legacy(
+    five_min: pd.DataFrame,
+    *,
+    as_of: dt.datetime | pd.Timestamp | None = None,
+) -> tuple[bool, str, int, dict[str, Any]]:
     info: dict[str, Any] = {}
     if five_min.empty:
         return False, "", 0, info
@@ -903,12 +1994,17 @@ def intraday_5k_daytrade_signal(five_min: pd.DataFrame) -> tuple[bool, str, int,
     for col in ("open", "max", "min", "close", "Trading_Volume"):
         df[col] = pd.to_numeric(df[col], errors="coerce")
     df = df.dropna(subset=["date", "open", "max", "min", "close"]).sort_values("date")
+    raw_last_timestamp = df["date"].dropna().max() if not df["date"].dropna().empty else None
+    df = keep_completed_5m_bars(df, as_of=as_of)
+    if df.empty:
+        return False, "", 0, info
+    completed_cutoff = completed_5m_cutoff(as_of)
     report_day = df["date"].dropna().max().date()
     today = df[df["date"].dt.date == report_day].copy()
     today = today[(today["date"].dt.time >= dt.time(9, 5)) & (today["date"].dt.time <= dt.time(13, 30))]
     if len(today) < 2:
         return False, "", 0, info
-    ind = add_indicators(df)
+    ind = add_indicators(df, timeframe=TIMEFRAME_5K)
     today_ind = ind[ind["date"].dt.date == report_day].copy()
     today_ind = today_ind[(today_ind["date"].dt.time >= dt.time(9, 5)) & (today_ind["date"].dt.time <= dt.time(13, 30))]
     if len(today_ind) < 2:
@@ -918,6 +2014,7 @@ def intraday_5k_daytrade_signal(five_min: pd.DataFrame) -> tuple[bool, str, int,
     required = ["close", "open", "max", "min", "dif", "macd", "hist", "Trading_Volume"]
     if recent[required].isna().any().any():
         return False, "", 0, info
+    previous = recent.iloc[-2]
     ema5 = ind["close"].astype(float).ewm(span=5, adjust=False).mean().loc[latest.name]
     hist = recent["hist"].astype(float).tolist()
     dif = recent["dif"].astype(float).tolist()
@@ -936,8 +2033,26 @@ def intraday_5k_daytrade_signal(five_min: pd.DataFrame) -> tuple[bool, str, int,
     red_body = close > open_price
     close_near_high = high > 0 and (high - close) / high <= 0.018
     stop_risk_pct = (close - low_today) / close * 100 if close > 0 and low_today > 0 else 999
+    signal_stop = round(low_today, 2)
+    signal_stop_risk = round(stop_risk_pct, 2)
     info.update(
         {
+            "5k_raw_last_timestamp": str(raw_last_timestamp) if raw_last_timestamp is not None else "",
+            "5k_completed_cutoff": str(completed_cutoff),
+            "5k_signal_timestamp": str(latest["date"]),
+            "5k_previous_timestamp": str(recent.iloc[-2]["date"]) if len(recent) >= 2 else "",
+            "5k_signal_open": round(open_price, 2),
+            "5k_signal_high": round(high, 2),
+            "5k_signal_low": round(float(latest["min"]), 2),
+            "5k_signal_close": round(close, 2),
+            "5k_signal_ema5": round(float(ema5), 4),
+            "5k_signal_dif": round(float(dif[-1]), 6),
+            "5k_signal_macd": round(float(macd[-1]), 6),
+            "5k_signal_histogram": round(float(hist[-1]), 6),
+            "5k_previous_close": round(float(previous["close"]), 2),
+            "5k_previous_dif": round(float(dif[-2]), 6),
+            "5k_previous_macd": round(float(macd[-2]), 6),
+            "5k_previous_histogram": round(float(hist[-2]), 6),
             "5k_above_ema5": stands_above_ema5,
             "5k_hist_contracting_2": hist_contracting_2,
             "5k_hist_turn_red": hist_turn_red,
@@ -947,8 +2062,11 @@ def intraday_5k_daytrade_signal(five_min: pd.DataFrame) -> tuple[bool, str, int,
             "5k_close_near_high": close_near_high,
             "intraday_volume_shares": int(volume_today),
             "intraday_turnover": int(turnover_today),
-            "open_low_stop": round(low_today, 2),
-            "open_low_stop_risk_pct": round(stop_risk_pct, 2),
+            "open_low_stop": signal_stop,
+            "open_low_stop_risk_pct": signal_stop_risk,
+            "5k_stop_price": signal_stop,
+            "5k_stop_risk_pct": signal_stop_risk,
+            "5k_stop_risk_basis": A5_SIGNAL_PRICE_RULE,
         }
     )
     momentum = hist_contracting_2 or hist_turn_red or golden_cross or dif_turning_up
@@ -997,7 +2115,7 @@ def intraday_prepare_turn_signal(kbar: pd.DataFrame) -> tuple[bool, str, int, di
     )
     if len(hourly) < 65:
         return False, "", 0, info
-    ind = add_indicators(hourly)
+    ind = add_indicators(hourly, timeframe=TIMEFRAME_60K)
     tail = ind.tail(5)
     required = ["close", "open", "max", "ma5", "ma10", "ma20", "ma60", "dif", "macd", "hist", "kd_k", "kd_d"]
     if tail[required].isna().any().any():
@@ -1070,7 +2188,7 @@ def intraday_prepare_turn_signal(kbar: pd.DataFrame) -> tuple[bool, str, int, di
     return True, reason, priority, info
 
 
-def intraday_extreme_daytrade_signal(kbar: pd.DataFrame) -> tuple[bool, str, int, dict[str, Any]]:
+def intraday_extreme_daytrade_signal_legacy(kbar: pd.DataFrame) -> tuple[bool, str, int, dict[str, Any]]:
     info: dict[str, Any] = {}
     if kbar.empty:
         return False, "", 0, info
@@ -1096,7 +2214,7 @@ def intraday_extreme_daytrade_signal(kbar: pd.DataFrame) -> tuple[bool, str, int
     )
     if len(hourly) < 35:
         return False, "", 0, info
-    ind = add_indicators(hourly)
+    ind = add_indicators(hourly, timeframe=TIMEFRAME_60K)
     tail = ind.tail(20)
     latest3 = ind.tail(3)
     required = ["open", "close", "ma5", "ma10", "ma20", "dif", "macd", "hist", "Trading_Volume"]
@@ -1182,7 +2300,7 @@ def elite_reclaim_setup(daily: pd.DataFrame) -> tuple[bool, dict[str, Any]]:
     info: dict[str, Any] = {}
     if len(daily) < 65:
         return False, info
-    ind = add_indicators(daily)
+    ind = add_indicators(daily, timeframe=TIMEFRAME_DAILY)
     latest = ind.iloc[-1]
     previous = ind.iloc[-2]
     ma60_5ago = ind.iloc[-6]["ma60"] if len(ind) >= 66 else None
@@ -1322,7 +2440,7 @@ def recent_gain_pct(daily: pd.DataFrame, days: int = 3) -> float:
 def ma20_distance_pct(daily: pd.DataFrame) -> float:
     if len(daily) < 20:
         return 999.0
-    latest = add_indicators(daily).iloc[-1]
+    latest = add_indicators(daily, timeframe=TIMEFRAME_DAILY).iloc[-1]
     if pd.isna(latest["ma20"]) or float(latest["ma20"]) <= 0:
         return 999.0
     return (float(latest["close"]) - float(latest["ma20"])) / float(latest["ma20"]) * 100
@@ -1366,7 +2484,7 @@ def common_trade_filter_ok(
 def support_pullback_ok(daily: pd.DataFrame) -> bool:
     if len(daily) < 60:
         return False
-    ind = add_indicators(daily)
+    ind = add_indicators(daily, timeframe=TIMEFRAME_DAILY)
     latest = ind.iloc[-1]
     previous = ind.iloc[-2]
     required = ["close", "open", "ma5", "ma10", "ma20", "ma60"]
@@ -1404,7 +2522,7 @@ def intraday_kd_low_golden_cross(kbar: pd.DataFrame) -> bool:
     )
     if len(hourly) < 15:
         return False
-    ind = add_indicators(hourly)
+    ind = add_indicators(hourly, timeframe=TIMEFRAME_60K)
     tail = ind.tail(4)
     if tail[["kd_k", "kd_d"]].isna().any().any():
         return False
@@ -1420,7 +2538,7 @@ def intraday_kd_low_golden_cross(kbar: pd.DataFrame) -> bool:
 def breakout_platform_ok(daily: pd.DataFrame) -> bool:
     if len(daily) < 40:
         return False
-    ind = add_indicators(daily)
+    ind = add_indicators(daily, timeframe=TIMEFRAME_DAILY)
     latest = ind.iloc[-1]
     required = ["open", "close", "max", "min", "ma5", "ma10", "ma20", "Trading_Volume"]
     if latest[required].isna().any():
@@ -1709,6 +2827,9 @@ def score_short_candidate(item: dict[str, Any]) -> dict[str, Any]:
         else:
             score -= 25
             warnings.append("停損偏遠")
+        if item.get("category") != "5K早盤當沖雷達股" and stop_risk_exceeds_swing_baseline(risk):
+            if SWING_STOP_BASELINE_WARNING_TEXT not in warnings:
+                warnings.append(SWING_STOP_BASELINE_WARNING_TEXT)
 
     turnover = float(item.get("turnover") or 0)
     if turnover >= 300_000_000:
@@ -1919,6 +3040,7 @@ def get_universe(cfg: Config) -> pd.DataFrame:
         & info["stock_id"].str.fullmatch(r"\d{4}", na=False)
         & ~info["industry_category"].isin(["ETF", "大盤", "Index", "所有證券"])
     ].drop_duplicates(subset=["stock_id"]).copy()
+    collect_mother_universe_snapshots(info)
     universe = build_universe_by_yahoo_volume(info, cfg)
     if cfg.max_stocks > 0:
         universe = universe.head(cfg.max_stocks)
@@ -1994,6 +3116,7 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
     stock_id = row["stock_id"]
     stock_name = row["stock_name"]
     market_type = row.get("type", "")
+    intraday: pd.DataFrame | None = None
     try:
         daily = get_yahoo_daily(stock_id, market_type, cfg)
         if cfg.only_short_entry:
@@ -2009,6 +3132,42 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
 
         stop = calculate_stop_loss(daily, cfg)
         if stop["stop_loss"] is None:
+            empty_states = strategy_state_map(
+                filter_ok=False,
+                relay_filter_ok=False,
+                precision_filter_ok=False,
+                reclaim_ok=False,
+                support_ok=False,
+                kd_pullback_ok=False,
+                daily_macd_ok=False,
+                breakout_ok=False,
+                daily_prepare_ok=False,
+                prepare_turn_ok=False,
+                short_entry_ok=False,
+                daily_daytrade_ok=False,
+                daytrade_direction_ok=False,
+                five_k_ok=False,
+                intraday_volume_ok=False,
+                extreme_daytrade_ok=False,
+            )
+            collect_stock_ledgers(
+                row=row,
+                cfg=cfg,
+                daily=daily,
+                intraday=None,
+                states=empty_states,
+                stop=stop,
+                relay_stop=None,
+                filter_reasons=["STOP_LOSS_UNAVAILABLE"],
+                relay_filter_reasons=["STOP_LOSS_UNAVAILABLE"],
+                precision_filter_reasons=["STOP_LOSS_UNAVAILABLE"],
+                five_k_info={},
+                prepare_turn_info={},
+                short_entry_reason="",
+                prepare_turn_reason="",
+                extreme_daytrade_info={},
+                data_quality_flags=["STOP_LOSS_UNAVAILABLE"],
+            )
             return {}
         filter_ok, filter_reasons = common_trade_filter_ok(daily, cfg, row, stop)
         relay_stop = calculate_relay_stop_loss(daily, cfg)
@@ -2026,6 +3185,8 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
             stop,
             cfg.precision_max_stop_loss_risk_pct,
         )
+        support_ok = support_pullback_ok(daily)
+        breakout_ok = breakout_platform_ok(daily)
 
         kd_pullback_ok = False
         short_entry_ok = False
@@ -2045,6 +3206,8 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         five_k_reason = ""
         five_k_priority = 0
         five_k_info: dict[str, Any] = {}
+        intraday_volume_ok = False
+        daytrade_ok, daytrade_reasons = daytrade_filter_ok(row, cfg, stop)
         if cfg.enable_intraday_check:
             intraday = get_yahoo_intraday(stock_id, market_type, cfg)
             if intraday_session_is_current(intraday, cfg):
@@ -2055,44 +3218,103 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
                 prepare_turn_ok, prepare_turn_reason, prepare_turn_priority, prepare_turn_info = (
                     intraday_prepare_turn_signal(intraday)
                 )
-                (
-                    extreme_daytrade_ok,
-                    extreme_daytrade_reason,
-                    extreme_daytrade_priority,
-                    extreme_daytrade_info,
-                ) = intraday_extreme_daytrade_signal(intraday)
+                if A5_LEGACY_ENABLED:
+                    (
+                        extreme_daytrade_ok,
+                        extreme_daytrade_reason,
+                        extreme_daytrade_priority,
+                        extreme_daytrade_info,
+                    ) = intraday_extreme_daytrade_signal_legacy(intraday)
                 daytrade_direction_ok, daytrade_direction_info = intraday_60k_daytrade_direction_ok(
                     intraday
                 )
                 five_min = get_yahoo_5m_intraday(stock_id, market_type, cfg)
-                five_k_ok, five_k_reason, five_k_priority, five_k_info = intraday_5k_daytrade_signal(
-                    five_min
-                )
+                if A5_LEGACY_ENABLED:
+                    five_k_ok, five_k_reason, five_k_priority, five_k_info = intraday_5k_daytrade_signal_legacy(
+                        five_min
+                    )
                 intraday_volume_ok = (
                     int(five_k_info.get("intraday_volume_shares") or 0)
                     >= cfg.daytrade_min_volume_shares
                 )
-                extreme_daytrade_ok = bool(
-                    daily_daytrade_ok
-                    and daytrade_direction_ok
-                    and five_k_ok
-                    and intraday_volume_ok
-                )
-                extreme_daytrade_reason = five_k_reason
-                extreme_daytrade_priority = (
-                    five_k_priority
-                    + int(daytrade_direction_info.get("direction_priority") or 0)
-                    + (2 if daily_daytrade_info.get("ma_cluster_breakout_2pct") else 0)
-                )
-                extreme_daytrade_info = {
-                    **extreme_daytrade_info,
-                    **daytrade_direction_info,
-                    **five_k_info,
-                    **daily_daytrade_info,
-                    "intraday_volume_ok": intraday_volume_ok,
-                }
+                if A5_LEGACY_ENABLED:
+                    extreme_daytrade_ok = bool(
+                        daytrade_ok and daily_daytrade_ok and daytrade_direction_ok
+                        and five_k_ok and intraday_volume_ok
+                    )
+                else:
+                    a5n_row = row.copy()
+                    a5n_row["last_close"] = stop["last_close"]
+                    extreme_daytrade_info = evaluate_a5n(
+                        row=a5n_row, daily=daily, hourly=intraday, five_min=five_min,
+                        as_of=dt.datetime.now(TAIPEI_TZ), add_indicators=add_indicators,
+                        keep_completed_5m=keep_completed_5m_bars,
+                        daytrade_ok=daytrade_ok, daytrade_reasons=daytrade_reasons,
+                        max_price=cfg.max_price,
+                        min_volume_shares=cfg.daytrade_min_volume_shares,
+                        min_turnover=cfg.daytrade_min_turnover,
+                    )
+                    extreme_daytrade_info.update({
+                        "stock_id": str(stock_id), "stock_name": str(stock_name),
+                        "market_type": str(market_type),
+                    })
+                    A5_N_RUN_ROWS.append(extreme_daytrade_info)
+                    extreme_daytrade_ok = extreme_daytrade_info.get("strategy_state") == "ENTRY_VALIDATED"
+                    daily_daytrade_ok = all(
+                        extreme_daytrade_info.get("A", {}).get(k, {}).get("passed", False)
+                        for k in ("A1", "A2", "A5")
+                    )
+                    b = extreme_daytrade_info.get("B", {})
+                    daytrade_direction_ok = bool(
+                        b.get("B1", {}).get("passed") and b.get("B2", {}).get("passed")
+                        and (b.get("B3", {}).get("passed") or b.get("B4", {}).get("passed"))
+                    )
+                    five_k_ok = extreme_daytrade_ok
+                    intraday_volume_ok = bool(
+                        extreme_daytrade_info.get("A", {}).get("A5", {}).get("passed", False)
+                    )
+                    extreme_daytrade_reason = "平台突破後首次回測驗證"
+                    extreme_daytrade_priority = sum(
+                        int(v.get("passed", False))
+                        for layer in ("A", "B", "C")
+                        for v in extreme_daytrade_info.get(layer, {}).values()
+                    )
 
-        daytrade_ok, daytrade_reasons = daytrade_filter_ok(row, cfg, stop)
+        states = strategy_state_map(
+            filter_ok=filter_ok,
+            relay_filter_ok=relay_filter_ok,
+            precision_filter_ok=precision_filter_ok,
+            reclaim_ok=reclaim_ok,
+            support_ok=support_ok,
+            kd_pullback_ok=kd_pullback_ok,
+            daily_macd_ok=daily_macd_ok,
+            breakout_ok=breakout_ok,
+            daily_prepare_ok=daily_prepare_ok,
+            prepare_turn_ok=prepare_turn_ok,
+            short_entry_ok=short_entry_ok,
+            daily_daytrade_ok=daily_daytrade_ok,
+            daytrade_direction_ok=daytrade_direction_ok,
+            five_k_ok=five_k_ok,
+            intraday_volume_ok=intraday_volume_ok,
+            extreme_daytrade_ok=extreme_daytrade_ok,
+        )
+        collect_stock_ledgers(
+            row=row,
+            cfg=cfg,
+            daily=daily,
+            intraday=intraday,
+            states=states,
+            stop=stop,
+            relay_stop=relay_stop,
+            filter_reasons=filter_reasons,
+            relay_filter_reasons=relay_filter_reasons,
+            precision_filter_reasons=precision_filter_reasons,
+            five_k_info=five_k_info,
+            prepare_turn_info=prepare_turn_info,
+            short_entry_reason=short_entry_reason,
+            prepare_turn_reason=prepare_turn_reason,
+            extreme_daytrade_info=extreme_daytrade_info,
+        )
         normal_signal_possible = daily_macd_ok or reclaim_ok or daily_trend_ok or daily_prepare_ok
         normal_filter_possible = filter_ok or relay_filter_ok or precision_filter_ok
         if not ((normal_signal_possible and normal_filter_possible) or extreme_daytrade_ok):
@@ -2123,8 +3345,6 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         except Exception as exc:
             print(f"[chip-warn] {stock_id} institutional data unavailable: {exc}", file=sys.stderr)
 
-        support_ok = support_pullback_ok(daily)
-        breakout_ok = breakout_platform_ok(daily)
         daily_pct = price_change_pct(daily)
         gain_3d = recent_gain_pct(daily, 3)
         ma20_dist = ma20_distance_pct(daily)
@@ -2217,7 +3437,7 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         if filter_ok and daily_prepare_ok and prepare_turn_ok:
             categories["prepare_turn"] = {
                 **base,
-                "category": "60K起漲雷達股",
+                "category": A3_OBSERVATION_CATEGORY,
                 "subtype": prepare_turn_reason,
             }
         if precision_filter_ok and daily_macd_ok and short_entry_ok:
@@ -2229,15 +3449,23 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
         if extreme_daytrade_ok:
             categories["extreme_daytrade"] = {
                 **base,
-                "category": "5K早盤當沖雷達股",
+                "category": "A5-N平台蓄勢—早盤突破回測",
                 "subtype": extreme_daytrade_reason,
-                "stop_loss": extreme_daytrade_info.get("open_low_stop") or base["stop_loss"],
-                "stop_loss_risk_pct": extreme_daytrade_info.get("open_low_stop_risk_pct")
+                "signal_price": extreme_daytrade_info.get("signal_price") or base["last_close"],
+                "entry_price_rule": A5_SIGNAL_PRICE_RULE,
+                "signal_timestamp": extreme_daytrade_info.get("signal_timestamp"),
+                "last_completed_k_timestamp": extreme_daytrade_info.get("last_completed_5k_timestamp"),
+                "stop_loss": extreme_daytrade_info.get("structural_stop")
+                or base["stop_loss"],
+                "stop_loss_risk_pct": extreme_daytrade_info.get("stop_risk_pct")
                 or base["stop_loss_risk_pct"],
-                "stop_loss_method": "今日開盤低點",
+                "stop_loss_method": "A5-N首次回測結構防守",
             }
+        for category_item in categories.values():
+            attach_swing_stop_baseline_warning(category_item)
         return categories
     except Exception as exc:
+        collect_stock_failure_snapshot(row, cfg, stage="SCREEN_STOCK_EXCEPTION", error_text=str(exc))
         print(f"[skip] {stock_id} {stock_name}: {exc}", file=sys.stderr)
         return {}
     finally:
@@ -2306,9 +3534,9 @@ def screen_short_entry_only(
 CATEGORY_TITLES = {
     "strong_continuation": "第一類：均線收復轉強股（空翻多精英型）",
     "relay_breakout": "第二類：中繼再漲股（平台突破型）",
-    "prepare_turn": "第三類：60K起漲雷達股（提前觀察型）",
+    "prepare_turn": f"第三類：{A3_OBSERVATION_CATEGORY}",
     "precision_entry": "第四類：60K精準翻紅股",
-    "extreme_daytrade": "第五類：5K早盤當沖雷達股（當沖／隔日沖）",
+    "extreme_daytrade": "第五類：A5-N平台蓄勢—早盤突破回測【研究測試】",
 }
 
 LIMITED_CATEGORY_COUNTS = {
@@ -2745,7 +3973,11 @@ def minimalist_html_start(report_date: str, total: int) -> list[str]:
         "</style></head><body><div class='wrap'>",
         f"<h2>台股短線精選報告 - {report_date}</h2>",
         f"<p class='subtitle'>本次共篩出 {total} 筆分類結果。若遇休市，資料來源可能回傳最近一個交易日。</p>",
-        "<p class='note'>策略紀律：短線目標以 6% 至 10% 為主，停損防守線需優先於期待報酬。</p>",
+        "<p class='note'>策略紀律：波段目標以 6% 至 8% 為主、停損 3% 至 4%；當沖／極短線目標以 4% 至 6% 為主、停損 2% 至 3%。停損防守線需優先於期待報酬。</p>",
+        f"<p class='note'>Strategy Baseline: {MASTER_STRATEGY_SPEC_VERSION}<br>"
+        f"Tech Registry: {TECH_PARAM_REGISTRY_VERSION}<br>"
+        "Daily/60K MACD 8/17/9 | KDJ 10/4/4<br>"
+        "5K MACD 12/26/9 | KDJ 9/3/3</p>",
     ]
 
 
@@ -2756,7 +3988,7 @@ def format_report(
     weekly_sections: tuple[str, str] | None = None,
 ) -> tuple[str, str]:
     report_date = cfg_date(cfg)
-    subject = f"台股短線精選報告 - {report_date}"
+    subject = f"台股短線精選報告 - {report_date}｜{MASTER_STRATEGY_SPEC_VERSION} 新參數重掃"
     total = sum(len(items) for items in results.values())
     text_sections: list[str] = [
         f"台股短線精選報告日期：{report_date}，本次共篩出 {total} 筆分類結果。",
@@ -2950,7 +4182,7 @@ def trend_direction_text(row: dict[str, Any]) -> str:
             parts.append("60K低檔轉強")
     elif category == "中繼再漲股":
         parts.extend(["日K平台突破", "量價轉強"])
-    elif category == "60K起漲雷達股":
+    elif "60K起漲雷達" in category:
         parts.extend(["日K保護", "60K起漲觀察"])
     elif category == "60K精準翻紅股":
         parts.extend(["日K多方", "60K翻紅"])
@@ -2965,10 +4197,23 @@ def trend_direction_text(row: dict[str, Any]) -> str:
         parts.append("周K順風")
     if (row.get("daily_ma_cluster_info") or {}).get("ma_cluster_breakout_2pct"):
         parts.append("均線糾結突破")
+    if category != "5K早盤當沖雷達股" and stop_risk_exceeds_swing_baseline(
+        row.get("stop_loss_risk_pct")
+    ):
+        parts.append(SWING_STOP_BASELINE_WARNING_TEXT)
+    for warning in row.get("manual_review_warnings") or []:
+        parts.append(str(warning))
 
     if not parts:
         return "趨勢待觀察"
     return "，".join(dict.fromkeys(parts))
+
+
+def display_price_for_report(row: dict[str, Any]) -> Any:
+    category = str(row.get("category", "") or "")
+    if row.get("entry_price_rule") == A5_SIGNAL_PRICE_RULE or category.startswith("A5-N"):
+        return row.get("signal_price") or row.get("last_close")
+    return row.get("last_close")
 
 
 def report_display_dataframe(rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -2978,7 +4223,7 @@ def report_display_dataframe(rows: list[dict[str, Any]]) -> pd.DataFrame:
             {
                 "股票代號": str(row.get("stock_id", "")),
                 "股名": str(row.get("stock_name", "")),
-                "今日收盤價": format_number(row.get("last_close")),
+                "今日收盤價": format_number(display_price_for_report(row)),
                 "今日成交量(張)": format_integer(row.get("volume_lots")),
                 "建議停損價": format_number(row.get("stop_loss")),
                 "產業/題材": industry_topic_text(row),
@@ -3009,7 +4254,7 @@ def shortlist_dataframe(rows: list[dict[str, Any]]) -> pd.DataFrame:
                 "股名": str(row.get("stock_name", "")),
                 "所屬類別": "、".join(row.get("category_names", [row.get("category", "")])),
                 "短線分數": format_integer(row.get("short_score")),
-                "今日收盤價": format_number(row.get("last_close")),
+                "今日收盤價": format_number(display_price_for_report(row)),
                 "今日成交量(張)": format_integer(row.get("volume_lots")),
                 "建議停損價": format_number(row.get("stop_loss")),
                 "產業/題材": industry_topic_text(row),
@@ -3148,7 +4393,7 @@ def send_ntfy(message: str, cfg: Config, *, title: str = "TW Stock 60K Alert", p
     topic = cfg.ntfy_topic.strip().strip("/")
     url = f"{cfg.ntfy_server.rstrip('/')}/{topic}"
     headers = {
-        "Title": title.encode("ascii", errors="ignore").decode("ascii") or "TW Stock Alert",
+        "Title": str(Header(title, "utf-8")),
         "Priority": str(priority),
         "Tags": "chart_with_upwards_trend",
     }
@@ -3168,14 +4413,14 @@ def send_ntfy(message: str, cfg: Config, *, title: str = "TW Stock 60K Alert", p
 
 def format_intraday_ntfy_message(results: dict[str, list[dict[str, Any]]], market: dict[str, Any]) -> str:
     rows = []
-    for key in ("precision_entry", "extreme_daytrade"):
+    for key in ("precision_entry",):
         for item in results.get(key, []):
             rows.append(
                 (
                     key,
                     str(item.get("stock_id", "")),
                     str(item.get("stock_name", "")),
-                    float(item.get("last_close") or 0),
+                    float(display_price_for_report(item) or 0),
                     float(item.get("stop_loss") or 0),
                     int(item.get("short_score") or 0),
                     str(item.get("subtype", "")),
@@ -3185,7 +4430,7 @@ def format_intraday_ntfy_message(results: dict[str, list[dict[str, Any]]], marke
         lines = [
             "台股60K盤中檢查完成",
             f"大盤：{market.get('symbol')} 日{format_number(market.get('daily_pct'))}% / 盤中{format_number(market.get('intraday_pct'))}%",
-            "本次第四類（60K精準翻紅）與第五類（5K早盤當沖雷達）沒有符合標的。",
+            "本次第四類（60K精準翻紅）沒有符合標的。",
             "這代表程式有正常執行，只是條件未觸發。",
         ]
         return "\n".join(lines)
@@ -3201,6 +4446,95 @@ def format_intraday_ntfy_message(results: dict[str, list[dict[str, Any]]], marke
         )
     lines.append("僅供盤中觀察，仍需看委買賣、量能與大盤，不追高。")
     return "\n".join(lines)
+
+
+def a5n_gate_summary(item: dict[str, Any]) -> str:
+    parts = []
+    for layer in ("A", "B", "C"):
+        gates = item.get(layer, {})
+        passed = sum(int(v.get("passed", False)) for v in gates.values())
+        parts.append(f"{layer}{passed}/{len(gates)}")
+    return " ".join(parts)
+
+
+def format_a5n_ntfy_message(rows: list[dict[str, Any]]) -> str:
+    validated = [x for x in rows if x.get("strategy_state") == "ENTRY_VALIDATED"]
+    lines = ["🧪 A5-N 新策略即時測試"]
+    if validated:
+        for x in validated[:5]:
+            a1=(x.get("A",{}).get("A1",{}).get("raw",{})); a2=(x.get("A",{}).get("A2",{}).get("raw",{})); a4=(x.get("A",{}).get("A4",{}).get("raw",{}))
+            b1=(x.get("B",{}).get("B1",{}).get("raw",{})); b2=(x.get("B",{}).get("B2",{}).get("raw",{})); b4=(x.get("B",{}).get("B4",{}).get("raw",{}))
+            c3=(x.get("C",{}).get("C3",{}).get("raw",{})); c4=(x.get("C",{}).get("C4",{}).get("raw",{}))
+            lines += [
+                f"{x.get('stock_id')}／{x.get('stock_name')}", "目前狀態：ENTRY_VALIDATED",
+                f"日K：平台 {a1.get('platform_low')}–{a1.get('platform_high')}；距上緣 {a1.get('distance_to_high_pct')}%；MA20 {a2.get('ma20')}（前值 {a2.get('ma20_prior')}）；MACD {a4.get('reason')}",
+                f"60K：最後完成 {x.get('last_completed_60k_timestamp')}；低點 {b1.get('first_low')}→{b1.get('last_low')}；MA20/60 {b2.get('ma20')}/{b2.get('ma60')}；MACD柱 {b4.get('histogram')}；突破價 {x.get('breakout_level')}",
+                f"5K：突破 {x.get('breakout_timestamp')} @ {x.get('breakout_level')}；回測低 {x.get('pullback_low')}；訊號 {x.get('signal_price')}；複驗 {x.get('recheck_price')} @ {x.get('recheck_timestamp')}",
+                f"EMA5 {c3.get('ema5')}；MACD {c4.get('macd_reason')}；相對量 {c4.get('relative_volume')}；防守 {x.get('structural_stop')}（{x.get('stop_risk_pct')}%）；年齡 {x.get('signal_age_seconds')}秒",
+            ]
+    else:
+        lines.append("本次A5-N無正式合格標的")
+        ranked = sorted(rows, key=lambda x: sum(int(v.get("passed",False)) for z in ("A","B","C") for v in x.get(z,{}).values()), reverse=True)[:5]
+        for x in ranked:
+            reasons = ",".join(x.get("reject_reason") or ["資料不足/尚未觸發"])
+            lines.append(f"接近者｜{x.get('stock_id')} {x.get('stock_name')}｜{x.get('strategy_state')}｜{a5n_gate_summary(x)}｜未過：{reasons}")
+    lines.append(f"參數：{A5_N_CONFIG.get('parameter_status')}｜{A5_N_VERSION}")
+    lines.append("新策略測試訊號，僅供人工核對，非自動下單。")
+    return "\n".join(lines)
+
+
+def write_a5n_ledger(ntfy_sent_at: str | None = None) -> None:
+    if not A5_N_RUN_ROWS:
+        return
+    LEDGER_DIR.mkdir(parents=True, exist_ok=True)
+    run_id = LEDGER_CONTEXT.get("execution_id")
+    started = LEDGER_CONTEXT.get("started_at")
+    with A5_N_LEDGER_PATH.open("a", encoding="utf-8") as fh:
+        for row in A5_N_RUN_ROWS:
+            payload = {"run_id": run_id, "scan_started_at": started, **row, "ntfy_sent_at": ntfy_sent_at}
+            fh.write(json.dumps(payload, ensure_ascii=False, default=str) + "\n")
+
+
+def revalidate_a5n_entries(results: dict[str, list[dict[str, Any]]], cfg: Config) -> None:
+    """Re-fetch every provisional ENTRY_VALIDATED name immediately before ntfy."""
+    provisional = list(results.get("extreme_daytrade", []))
+    if not provisional:
+        return
+    kept: list[dict[str, Any]] = []
+    for item in provisional:
+        stock_id = str(item.get("stock_id", ""))
+        market_type = str(item.get("market_type", ""))
+        try:
+            daily = get_yahoo_daily(stock_id, market_type, cfg)
+            hourly = get_yahoo_intraday(stock_id, market_type, cfg)
+            five = get_yahoo_5m_intraday(stock_id, market_type, cfg)
+            raw_a5 = (item.get("extreme_daytrade_info", {}).get("A", {}).get("A5", {}).get("raw", {}))
+            volume = float(raw_a5.get("volume") or item.get("volume_lots", 0) * 1000)
+            row = pd.Series({
+                "stock_id": stock_id, "stock_name": item.get("stock_name", ""),
+                "type": market_type, "Trading_Volume": volume,
+                "last_close": float(item.get("signal_price") or item.get("last_close") or 0),
+            })
+            stop = {"last_close": row["last_close"]}
+            ok, reasons = daytrade_filter_ok(row, cfg, stop)
+            checked = evaluate_a5n(
+                row=row, daily=daily, hourly=hourly, five_min=five,
+                as_of=dt.datetime.now(TAIPEI_TZ), add_indicators=add_indicators,
+                keep_completed_5m=keep_completed_5m_bars, daytrade_ok=ok,
+                daytrade_reasons=reasons, max_price=cfg.max_price,
+                min_volume_shares=cfg.daytrade_min_volume_shares,
+                min_turnover=cfg.daytrade_min_turnover,
+            )
+            checked.update({"stock_id": stock_id, "stock_name": item.get("stock_name", ""), "market_type": market_type, "revalidation": True})
+            A5_N_RUN_ROWS.append(checked)
+            if checked.get("strategy_state") == "ENTRY_VALIDATED":
+                item["extreme_daytrade_info"] = checked
+                item["signal_price"] = checked.get("signal_price")
+                kept.append(item)
+        except Exception as exc:
+            failed = {"stock_id": stock_id, "stock_name": item.get("stock_name", ""), "strategy_state": "EXPIRED", "reject_reason": [f"C5_RECHECK_ERROR:{exc}"], "revalidation": True}
+            A5_N_RUN_ROWS.append(failed)
+    results["extreme_daytrade"] = kept
 
 
 def html_from_body(body: str) -> str:
@@ -3287,17 +4621,32 @@ def notify(subject: str, body: str, cfg: Config) -> bool:
     return sent
 
 
-def run(cfg: Config) -> dict[str, list[dict[str, Any]]]:
+def active_category_keys(cfg: Config) -> list[str]:
+    if cfg.only_short_entry:
+        return ["precision_entry"]
+    if cfg.only_prepare_turn:
+        return ["prepare_turn"]
+    if cfg.intraday_alert_only:
+        return ["precision_entry", "extreme_daytrade"]
+    return list(CATEGORY_TITLES)
+
+
+def run_mode_name(cfg: Config) -> str:
+    if cfg.intraday_alert_only:
+        return "intraday_ntfy"
+    if cfg.only_short_entry:
+        return "only_short_entry"
+    if cfg.only_prepare_turn:
+        return "only_prepare_turn"
+    return "formal_report"
+
+
+def run(cfg: Config, market: dict[str, Any] | None = None) -> dict[str, list[dict[str, Any]]]:
+    A5_N_RUN_ROWS.clear()
+    active_keys = active_category_keys(cfg)
+    reset_ledger_context(cfg, run_mode_name(cfg), market)
     universe = get_universe(cfg)
     print(f"Universe size after volume filter: {len(universe)}")
-    if cfg.only_short_entry:
-        active_keys = ["precision_entry"]
-    elif cfg.only_prepare_turn:
-        active_keys = ["prepare_turn"]
-    elif cfg.intraday_alert_only:
-        active_keys = ["precision_entry", "extreme_daytrade"]
-    else:
-        active_keys = list(CATEGORY_TITLES)
     results: dict[str, list[dict[str, Any]]] = {key: [] for key in active_keys}
     for i, (_, row) in enumerate(universe.iterrows(), start=1):
         print(f"[{i}/{len(universe)}] screening {row['stock_id']} {row['stock_name']}")
@@ -3339,6 +4688,12 @@ def run(cfg: Config) -> dict[str, list[dict[str, Any]]]:
                 print(f"  -> matched {row['stock_id']} {row['stock_name']} [60K起漲雷達股]")
 
     finalize_results(results)
+    write_run_ledger(
+        cfg=cfg,
+        status="success",
+        universe_count=len(universe),
+        active_keys=active_keys,
+    )
     return results
 
 
@@ -3391,6 +4746,7 @@ def finalize_results(results: dict[str, list[dict[str, Any]]]) -> None:
                 ),
                 reverse=True,
             )
+        annotate_ledger_prelimit_rank(key, rows)
         limit = LIMITED_CATEGORY_COUNTS.get(key)
         if limit is not None:
             results[key] = rows[:limit]
@@ -3422,6 +4778,7 @@ def finalize_results(results: dict[str, list[dict[str, Any]]]) -> None:
         reverse=True,
     )
     results["shortlist"] = shortlist[: LIMITED_CATEGORY_COUNTS["shortlist"]]
+    flush_signal_ledgers(results)
 
 
 def parse_args() -> argparse.Namespace:
@@ -3433,6 +4790,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--only-short-entry", action="store_true", help="Run only category 4")
     parser.add_argument("--only-prepare-turn", action="store_true", help="Run only category 3")
     parser.add_argument("--intraday-ntfy", action="store_true", help="Run category 4/5 intraday alert mode and push ntfy only")
+    parser.add_argument("--a5n-test", action="store_true", help="Run A5-N research scan now and send its dedicated test ntfy")
     parser.add_argument("--report-date", default=None, help="Use data up to YYYY-MM-DD for review/backtest")
     parser.add_argument(
         "--skip-if-sent",
@@ -3460,16 +4818,17 @@ def main() -> int:
         cfg = dataclasses.replace(cfg, only_short_entry=True)
     if args.only_prepare_turn:
         cfg = dataclasses.replace(cfg, only_prepare_turn=True)
-    if args.intraday_ntfy:
+    if args.intraday_ntfy or args.a5n_test:
         cfg = dataclasses.replace(cfg, intraday_alert_only=True)
     if args.report_date:
         cfg = dataclasses.replace(cfg, report_date=args.report_date)
 
-    if args.intraday_ntfy:
+    if args.intraday_ntfy or args.a5n_test:
         market = market_state(cfg)
-        if not market.get("ok"):
+        if not market.get("ok") and not args.a5n_test:
             reason = str(market.get("reason") or "大盤狀態未通過")
             print(f"[market-skip] {reason}")
+            reset_ledger_context(cfg, run_mode_name(cfg), market)
             send_ntfy(
                 "台股60K盤中檢查暫停\n"
                 f"原因：{reason}\n"
@@ -3478,19 +4837,31 @@ def main() -> int:
                 title="TW Stock 60K Market Skip",
                 priority="3",
             )
+            write_run_ledger(
+                cfg=cfg,
+                status="market_skipped",
+                universe_count=0,
+                active_keys=active_category_keys(cfg),
+                error_text=reason,
+            )
             return 0
-        results = run(cfg)
-        message = format_intraday_ntfy_message(results, market)
-        if message:
-            has_daytrade = bool(results.get("extreme_daytrade"))
+        results = run(cfg, market)
+        revalidate_a5n_entries(results, cfg)
+        if args.intraday_ntfy:
+            message = format_intraday_ntfy_message(results, market)
             send_ntfy(
                 message,
                 cfg,
-                title="TW Stock 5K Daytrade Alert" if has_daytrade else "TW Stock 60K Alert",
-                priority="5" if has_daytrade else "4",
+                title="TW Stock 60K Alert",
+                priority="4",
             )
-        else:
-            print("[ntfy] No category 4/5 intraday candidates.")
+        a5n_message = format_a5n_ntfy_message(A5_N_RUN_ROWS)
+        sent_at = now_taipei().isoformat()
+        sent = False if args.no_notify else send_ntfy(
+            a5n_message, cfg, title="🧪 A5-N 新策略即時測試", priority="4"
+        )
+        write_a5n_ledger(sent_at if sent else None)
+        print(a5n_message)
         return 0
 
     if args.skip_if_sent and already_sent_today(cfg):
@@ -3518,7 +4889,15 @@ def main() -> int:
         subject, body = format_report(results, cfg, event_sections, weekly_sections)
         formal_report_ready = True
     except Exception:
-        subject, body = format_status_report(traceback.format_exc(), cfg)
+        error_text = traceback.format_exc()
+        write_run_ledger(
+            cfg=cfg,
+            status="error",
+            universe_count=0,
+            active_keys=active_category_keys(cfg),
+            error_text=error_text,
+        )
+        subject, body = format_status_report(error_text, cfg)
 
     if args.no_notify:
         print(subject)
