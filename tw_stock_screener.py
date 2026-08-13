@@ -39,6 +39,10 @@ import yfinance as yf
 from bs4 import BeautifulSoup
 from a5n_strategy import A5_N_CONFIG, A5_N_VERSION, a5n_rank_key, evaluate_a5n
 from a5n_variant_b import A5_N_B_CONFIG, A5_N_B_VERSION
+from a5n_fixed_pool import (
+    A5_N_FIXED_POOL_CONFIG, A5_N_FIXED_POOL_VERSION,
+    evaluate_fixed_pool_candidate, fixed_pool_rank_key,
+)
 
 
 FINMIND_URL = "https://api.finmindtrade.com/api/v4/data"
@@ -122,6 +126,8 @@ A5_N_PREMARKET_LEDGER_PATH = LEDGER_DIR / "a5n_premarket_ledger.jsonl"
 A5_N_B_POOL_PATH = LEDGER_DIR / "a5n_b_shadow_candidate_pool.json"
 A5_N_B_PREMARKET_LEDGER_PATH = LEDGER_DIR / "a5n_b_shadow_premarket_ledger.jsonl"
 A5_N_B_SIGNAL_LEDGER_PATH = LEDGER_DIR / "a5n_b_shadow_signal_ledger.jsonl"
+A5_N_FIXED_POOL_PATH = LEDGER_DIR / "a5n_weekly_fixed_pool.json"
+A5_N_FIXED_POOL_LEDGER_PATH = LEDGER_DIR / "a5n_weekly_fixed_pool_ledger.jsonl"
 A5_N_RUN_ROWS: list[dict[str, Any]] = []
 
 
@@ -3087,6 +3093,117 @@ def a5n_official_daytrade_eligibility(stock_id: str, cfg: Config, scan_date: dt.
                   "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"}
 
 
+def build_a5n_weekly_fixed_pool(
+    cfg: Config, as_of: dt.datetime | None = None, anchor_date: str | None = None,
+) -> list[dict[str, Any]]:
+    """Build Friday T-1 fixed pool for the following Monday-Friday."""
+    now = as_of or dt.datetime.now(TAIPEI_TZ)
+    anchor = pd.Timestamp(anchor_date or pd.Timestamp(now).date())
+    if anchor.weekday() != 4:
+        raise ValueError(f"Fixed-pool anchor must be Friday, got {anchor.date()}")
+    if pd.Timestamp(now).date() < anchor.date():
+        raise ValueError("Fixed-pool anchor cannot be in the future")
+    mother = get_mother_universe(cfg)
+    qualified: list[dict[str, Any]] = []
+    audit: list[dict[str, Any]] = []
+    run_id = str(uuid.uuid4())
+    for i, (_, source) in enumerate(mother.iterrows(), start=1):
+        stock_id, market_type = str(source["stock_id"]), str(source.get("type", ""))
+        print(f"[fixed-pool {i}/{len(mother)}] {stock_id} {source.get('stock_name','')}")
+        base = {"run_id": run_id, "built_at": pd.Timestamp(now).isoformat(),
+                "stock_id": stock_id, "stock_name": str(source.get("stock_name", "")),
+                "market_type": market_type}
+        try:
+            daily = get_yahoo_daily(stock_id, market_type, cfg)
+            # Cheap technical precheck first; official per-stock API only for
+            # names that pass price, liquidity and momentum.
+            probe = evaluate_fixed_pool_candidate(
+                daily, anchor_date=anchor, add_indicators=add_indicators,
+                official_daytrade_ok=True,
+                official_status={"reason": "PRECHECK_BEFORE_OFFICIAL_LOOKUP"},
+            )
+            technical_ok = all(probe.get("gates", {}).get(k, {}).get("passed", False)
+                               for k in ("F1_PRICE_BAND", "F2_LIQUIDITY")) and (
+                probe.get("gates", {}).get("F4_MOMENTUM_A", {}).get("passed", False)
+                or probe.get("gates", {}).get("F5_MOMENTUM_B", {}).get("passed", False))
+            if technical_ok:
+                eligible, status = a5n_official_daytrade_eligibility(stock_id, cfg, anchor.date())
+                probe = evaluate_fixed_pool_candidate(
+                    daily, anchor_date=anchor, add_indicators=add_indicators,
+                    official_daytrade_ok=eligible, official_status=status)
+            record = {**base, "fixed_pool": probe}
+            audit.append(record)
+            if probe.get("passed"):
+                qualified.append(record)
+        except Exception as exc:
+            audit.append({**base, "fixed_pool": {"strategy_version": A5_N_FIXED_POOL_VERSION,
+                "passed": False, "reject_reason": [f"FIXED_BUILD_ERROR:{exc}"]}})
+    qualified.sort(key=fixed_pool_rank_key, reverse=True)
+    pre_cap_count = len(qualified)
+    cap_applied = pre_cap_count > int(A5_N_FIXED_POOL_CONFIG["hard_cap_trigger_count"])
+    kept = qualified[:int(A5_N_FIXED_POOL_CONFIG["hard_cap_count"])] if cap_applied else qualified
+    valid_from = anchor + pd.Timedelta(days=3)
+    valid_through = valid_from + pd.Timedelta(days=4)
+    reject_counts: dict[str, int] = {}
+    for rec in audit:
+        for reason in rec.get("fixed_pool", {}).get("reject_reason", []):
+            reject_counts[reason] = reject_counts.get(reason, 0) + 1
+    gate_counts = {key: sum(bool(x.get("fixed_pool", {}).get("gates", {}).get(key, {}).get("passed")) for x in audit)
+                   for key in ("F1_PRICE_BAND", "F2_LIQUIDITY", "F3_OFFICIAL_STATUS", "F4_MOMENTUM_A", "F5_MOMENTUM_B")}
+    # F3 is an expensive official lookup performed only after technical gates;
+    # do not count the PRECHECK placeholder as an official pass.
+    gate_counts["F3_OFFICIAL_STATUS"] = sum(
+        bool(x.get("fixed_pool", {}).get("gates", {}).get("F3_OFFICIAL_STATUS", {}).get("passed"))
+        and x.get("fixed_pool", {}).get("gates", {}).get("F3_OFFICIAL_STATUS", {}).get("raw", {}).get("reason") != "PRECHECK_BEFORE_OFFICIAL_LOOKUP"
+        for x in audit)
+    official_lookup_count = sum(
+        "F3_OFFICIAL_STATUS" in x.get("fixed_pool", {}).get("gates", {})
+        and x.get("fixed_pool", {}).get("gates", {}).get("F3_OFFICIAL_STATUS", {}).get("raw", {}).get("reason") != "PRECHECK_BEFORE_OFFICIAL_LOOKUP"
+        for x in audit)
+    payload = {"strategy_version": A5_N_FIXED_POOL_VERSION,
+        "parameter_status": A5_N_FIXED_POOL_CONFIG["parameter_status"],
+        "built_at": pd.Timestamp(now).isoformat(), "anchor_date": str(anchor.date()),
+        "valid_from": str(valid_from.date()), "valid_through": str(valid_through.date()),
+        "data_cutoff_rule": "completed daily bars through Friday close only",
+        "official_status_note": "Friday official status; revalidated on the 09:31 scan date",
+        "config": A5_N_FIXED_POOL_CONFIG, "mother_count": len(mother),
+        "evaluated_count": len(audit), "qualified_count_before_cap": pre_cap_count,
+        "kept_count": len(kept), "cap_applied": cap_applied,
+        "below_target_warning": len(kept) < int(A5_N_FIXED_POOL_CONFIG["target_min_count"]),
+        "above_target_warning": len(kept) > int(A5_N_FIXED_POOL_CONFIG["target_max_count"]),
+        "gate_pass_counts": gate_counts, "official_lookup_count": official_lookup_count,
+        "reject_reason_counts": reject_counts,
+        "candidates": kept}
+    LEDGER_DIR.mkdir(parents=True, exist_ok=True)
+    A5_N_FIXED_POOL_PATH.write_text(json.dumps(payload, ensure_ascii=False, default=str, indent=2), encoding="utf-8")
+    with A5_N_FIXED_POOL_LEDGER_PATH.open("a", encoding="utf-8") as fh:
+        for record in audit:
+            fh.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+    print(f"[fixed-pool] qualified={pre_cap_count} kept={len(kept)} valid={valid_from.date()}..{valid_through.date()}")
+    return kept
+
+
+def load_a5n_fixed_pool_universe(cfg: Config) -> pd.DataFrame:
+    if not A5_N_FIXED_POOL_PATH.exists():
+        raise RuntimeError(f"A5-N fixed pool missing: {A5_N_FIXED_POOL_PATH}")
+    payload = json.loads(A5_N_FIXED_POOL_PATH.read_text(encoding="utf-8"))
+    today = pd.Timestamp.now(tz=TAIPEI_TZ).date() if not cfg.report_date else pd.Timestamp(cfg.report_date).date()
+    if not (pd.Timestamp(payload["valid_from"]).date() <= today <= pd.Timestamp(payload["valid_through"]).date()):
+        raise RuntimeError(f"A5-N fixed pool not valid on {today}: {payload['valid_from']}..{payload['valid_through']}")
+    rows = []
+    for x in payload.get("candidates", []):
+        # Friday eligibility is not trusted for a later scan.  This lookup is
+        # fail-closed, covering delisting/status changes between refreshes.
+        eligible, status = a5n_official_daytrade_eligibility(str(x["stock_id"]), cfg, today)
+        if not eligible:
+            continue
+        rows.append({"stock_id": x["stock_id"], "stock_name": x["stock_name"],
+            "type": x["market_type"], "Trading_Volume": x["fixed_pool"]["ranking"]["average_volume_20d_shares"],
+            "a5n_daytrade_eligible": True, "a5n_candidate_source": "A5_N_FIXED_POOL",
+            "a5n_fixed_qualification": x["fixed_pool"], "a5n_current_official_status": status})
+    return pd.DataFrame(rows)
+
+
 def build_a5n_premarket_pool(cfg: Config, as_of: dt.datetime | None = None) -> list[dict[str, Any]]:
     """Build and persist the ranked A pool from completed T-1 daily bars only."""
     now = as_of or dt.datetime.now(TAIPEI_TZ)
@@ -3462,6 +3579,8 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
                         max_price=cfg.max_price,
                         min_volume_shares=cfg.daytrade_min_volume_shares,
                         min_turnover=cfg.daytrade_min_turnover,
+                        daily_prequalified=(row.get("a5n_fixed_qualification")
+                            if row.get("a5n_candidate_source") == "A5_N_FIXED_POOL" else None),
                     )
                     extreme_daytrade_info.update({
                         "stock_id": str(stock_id), "stock_name": str(stock_name),
@@ -3469,10 +3588,10 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
                     })
                     A5_N_RUN_ROWS.append(extreme_daytrade_info)
                     extreme_daytrade_ok = extreme_daytrade_info.get("strategy_state") == "ENTRY_VALIDATED"
-                    daily_daytrade_ok = all(
-                        extreme_daytrade_info.get("A", {}).get(k, {}).get("passed", False)
-                        for k in ("A1", "A2", "A5")
-                    )
+                    daily_daytrade_ok = bool(
+                        extreme_daytrade_info.get("candidate_source") == "A5_N_FIXED_POOL"
+                        or all(extreme_daytrade_info.get("A", {}).get(k, {}).get("passed", False)
+                               for k in ("A1", "A2", "A5")))
                     b = extreme_daytrade_info.get("B", {})
                     daytrade_direction_ok = bool(
                         b.get("B1", {}).get("passed") and b.get("B2", {}).get("passed")
@@ -4750,6 +4869,8 @@ def revalidate_a5n_entries(results: dict[str, list[dict[str, Any]]], cfg: Config
                 daytrade_reasons=reasons, max_price=cfg.max_price,
                 min_volume_shares=cfg.daytrade_min_volume_shares,
                 min_turnover=cfg.daytrade_min_turnover,
+                daily_prequalified=(item.get("extreme_daytrade_info", {}).get("fixed_pool_qualification")
+                    if item.get("extreme_daytrade_info", {}).get("candidate_source") == "A5_N_FIXED_POOL" else None),
             )
             checked.update({"stock_id": stock_id, "stock_name": item.get("stock_name", ""), "market_type": market_type, "revalidation": True})
             A5_N_RUN_ROWS.append(checked)
@@ -5019,6 +5140,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--a5n-test", action="store_true", help="Run A5-N research scan now and send its dedicated test ntfy")
     parser.add_argument("--a5n-build-pool", action="store_true", help="Build today's A5-N T-1 premarket candidate pool")
     parser.add_argument("--a5n-scan-pool", action="store_true", help="Scan only today's persisted A5-N candidate pool")
+    parser.add_argument("--a5n-build-fixed-pool", action="store_true", help="Build weekly A5-N fixed pool from a completed Friday")
+    parser.add_argument("--a5n-scan-fixed-pool", action="store_true", help="09:31 scan of the valid weekly A5-N fixed pool")
+    parser.add_argument("--fixed-pool-anchor", default=None, help="Friday YYYY-MM-DD anchor for fixed-pool build/replay")
     parser.add_argument("--report-date", default=None, help="Use data up to YYYY-MM-DD for review/backtest")
     parser.add_argument(
         "--skip-if-sent",
@@ -5046,7 +5170,7 @@ def main() -> int:
         cfg = dataclasses.replace(cfg, only_short_entry=True)
     if args.only_prepare_turn:
         cfg = dataclasses.replace(cfg, only_prepare_turn=True)
-    if args.intraday_ntfy or args.a5n_test or args.a5n_scan_pool:
+    if args.intraday_ntfy or args.a5n_test or args.a5n_scan_pool or args.a5n_scan_fixed_pool:
         cfg = dataclasses.replace(cfg, intraday_alert_only=True)
     if args.report_date:
         cfg = dataclasses.replace(cfg, report_date=args.report_date)
@@ -5054,10 +5178,13 @@ def main() -> int:
     if args.a5n_build_pool:
         build_a5n_premarket_pool(cfg)
         return 0
+    if args.a5n_build_fixed_pool:
+        build_a5n_weekly_fixed_pool(cfg, anchor_date=args.fixed_pool_anchor)
+        return 0
 
-    if args.intraday_ntfy or args.a5n_test or args.a5n_scan_pool:
+    if args.intraday_ntfy or args.a5n_test or args.a5n_scan_pool or args.a5n_scan_fixed_pool:
         market = market_state(cfg)
-        if not market.get("ok") and not (args.a5n_test or args.a5n_scan_pool):
+        if not market.get("ok") and not (args.a5n_test or args.a5n_scan_pool or args.a5n_scan_fixed_pool):
             reason = str(market.get("reason") or "大盤狀態未通過")
             print(f"[market-skip] {reason}")
             reset_ledger_context(cfg, run_mode_name(cfg), market)
@@ -5077,7 +5204,8 @@ def main() -> int:
                 error_text=reason,
             )
             return 0
-        pool_universe = load_a5n_premarket_universe(cfg) if args.a5n_scan_pool else None
+        pool_universe = (load_a5n_fixed_pool_universe(cfg) if args.a5n_scan_fixed_pool
+                         else load_a5n_premarket_universe(cfg) if args.a5n_scan_pool else None)
         results = run(cfg, market, universe_override=pool_universe)
         if args.a5n_scan_pool:
             run_a5n_b_shadow_scan(cfg)

@@ -99,6 +99,7 @@ def evaluate_a5n(
     daytrade_ok: bool, daytrade_reasons: list[str], max_price: float,
     min_volume_shares: int, min_turnover: float,
     config: dict[str, Any] | None = None,
+    daily_prequalified: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cfg = dict(A5_N_CONFIG if config is None else config)
     now = pd.Timestamp(as_of)
@@ -112,6 +113,9 @@ def evaluate_a5n(
         "signal_price": None, "recheck_timestamp": None, "recheck_price": None,
         "signal_age_seconds": None,
     }
+    if daily_prequalified is not None:
+        result["candidate_source"] = "A5_N_FIXED_POOL"
+        result["fixed_pool_qualification"] = daily_prequalified
     d = _completed_daily(daily, now)
     h = _completed_60k(hourly, now)
     f = five_min.copy()
@@ -174,7 +178,10 @@ def evaluate_a5n(
         median_volume_20d=round(median_volume), min_volume=min_volume_shares,
         average_turnover_20d=round(avg_turnover), min_turnover=min_turnover,
         sparse_day_ratio=round(sparse_ratio,3), eligibility_source="T-1 completed daily 20-day liquidity + existing daytrade eligibility", reasons=daytrade_reasons)
-    if not (a1 and a2 and a5):
+    # The weekly fixed pool is an explicitly separate A-source for the 09:31
+    # research scan.  Preserve strict A1/A2/A5 as observations, but do not let
+    # them silently turn the expanded pool back into the strict pool.
+    if daily_prequalified is None and not (a1 and a2 and a5):
         result["reject_reason"] += [k for k in ("A1","A2","A5") if not result["A"][k]["passed"]]
         return result
     result["strategy_state"] = "DAILY_CANDIDATE"
