@@ -34,7 +34,9 @@ permissions:
   contents: write
 
 concurrency:
-  group: daily-tw-stock-screener-${{ github.ref }}
+  # A5-N early scans must not be queued behind or displaced by formal-report
+  # insurance runs.  Each family remains serialized within its own group.
+  group: ${{ ((github.event_name == 'workflow_dispatch' && inputs.mode != 'auto' && inputs.mode != '') || (github.event_name == 'schedule' && (github.event.schedule == '40 0 * * 1-5' || github.event.schedule == '16,26,31 1 * * 1-5'))) && format('a5n-{0}', github.ref) || format('daily-tw-stock-screener-{0}', github.ref) }}
   cancel-in-progress: false
 
 jobs:
