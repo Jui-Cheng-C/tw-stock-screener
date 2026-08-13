@@ -100,7 +100,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ledgers/a5n_weekly_fixed_pool.json ledgers/a5n_weekly_fixed_pool_ledger.jsonl
+          git add ledgers/a5n_weekly_fixed_pool.json ledgers/a5n_weekly_fixed_pool_ledger.jsonl ledgers/a5n_weekly_fixed_pool_momentum_rank_shadow.json ledgers/a5n_weekly_fixed_pool_momentum_rank_shadow_ledger.jsonl
           if ! git diff --cached --quiet; then
             git commit -m "Build weekly A5-N fixed pool"
             git pull --rebase

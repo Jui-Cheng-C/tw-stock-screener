@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 import pandas as pd
 
@@ -71,6 +72,17 @@ class FixedPoolRuleTests(unittest.TestCase):
     def test_config_keeps_requested_cap_policy(self):
         self.assertEqual(A5_N_FIXED_POOL_CONFIG["hard_cap_trigger_count"], 180)
         self.assertEqual(A5_N_FIXED_POOL_CONFIG["hard_cap_count"], 150)
+
+    def test_momentum_rank_shadow_is_isolated_from_formal_pool(self):
+        source = Path("tw_stock_screener.py").read_text(encoding="utf-8")
+        self.assertIn('"research_shadow_momentum_rank_only"', source)
+        self.assertIn('"momentum_required"] = False', source)
+        self.assertIn('"shadow_only": True, "ntfy_eligible": False', source)
+        self.assertIn("run_a5n_fixed_momentum_rank_shadow_scan(cfg)", source)
+
+    def test_shadow_does_not_change_formal_pass_definition(self):
+        source = Path("a5n_fixed_pool.py").read_text(encoding="utf-8")
+        self.assertIn("official_daytrade_ok and momentum_ok", source)
 
 
 if __name__ == "__main__":

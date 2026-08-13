@@ -128,6 +128,9 @@ A5_N_B_PREMARKET_LEDGER_PATH = LEDGER_DIR / "a5n_b_shadow_premarket_ledger.jsonl
 A5_N_B_SIGNAL_LEDGER_PATH = LEDGER_DIR / "a5n_b_shadow_signal_ledger.jsonl"
 A5_N_FIXED_POOL_PATH = LEDGER_DIR / "a5n_weekly_fixed_pool.json"
 A5_N_FIXED_POOL_LEDGER_PATH = LEDGER_DIR / "a5n_weekly_fixed_pool_ledger.jsonl"
+A5_N_FIXED_SHADOW_POOL_PATH = LEDGER_DIR / "a5n_weekly_fixed_pool_momentum_rank_shadow.json"
+A5_N_FIXED_SHADOW_POOL_LEDGER_PATH = LEDGER_DIR / "a5n_weekly_fixed_pool_momentum_rank_shadow_ledger.jsonl"
+A5_N_FIXED_SHADOW_SIGNAL_LEDGER_PATH = LEDGER_DIR / "a5n_fixed_pool_momentum_rank_shadow_signal_ledger.jsonl"
 A5_N_RUN_ROWS: list[dict[str, Any]] = []
 
 
@@ -3106,6 +3109,8 @@ def build_a5n_weekly_fixed_pool(
     mother = get_mother_universe(cfg)
     qualified: list[dict[str, Any]] = []
     audit: list[dict[str, Any]] = []
+    shadow_qualified: list[dict[str, Any]] = []
+    shadow_audit: list[dict[str, Any]] = []
     run_id = str(uuid.uuid4())
     for i, (_, source) in enumerate(mother.iterrows(), start=1):
         stock_id, market_type = str(source["stock_id"]), str(source.get("type", ""))
@@ -3122,11 +3127,9 @@ def build_a5n_weekly_fixed_pool(
                 official_daytrade_ok=True,
                 official_status={"reason": "PRECHECK_BEFORE_OFFICIAL_LOOKUP"},
             )
-            technical_ok = all(probe.get("gates", {}).get(k, {}).get("passed", False)
-                               for k in ("F1_PRICE_BAND", "F2_LIQUIDITY")) and (
-                probe.get("gates", {}).get("F4_MOMENTUM_A", {}).get("passed", False)
-                or probe.get("gates", {}).get("F5_MOMENTUM_B", {}).get("passed", False))
-            if technical_ok:
+            base_ok = all(probe.get("gates", {}).get(k, {}).get("passed", False)
+                          for k in ("F1_PRICE_BAND", "F2_LIQUIDITY"))
+            if base_ok:
                 eligible, status = a5n_official_daytrade_eligibility(stock_id, cfg, anchor.date())
                 probe = evaluate_fixed_pool_candidate(
                     daily, anchor_date=anchor, add_indicators=add_indicators,
@@ -3135,13 +3138,32 @@ def build_a5n_weekly_fixed_pool(
             audit.append(record)
             if probe.get("passed"):
                 qualified.append(record)
+            shadow_probe = json.loads(json.dumps(probe, ensure_ascii=False, default=str))
+            shadow_probe["strategy_version"] = A5_N_FIXED_POOL_VERSION + "-momentum-rank-shadow"
+            shadow_probe["parameter_status"] = "research_shadow_momentum_rank_only"
+            shadow_probe["shadow_only"] = True
+            shadow_probe["ntfy_eligible"] = False
+            shadow_probe["momentum_required"] = False
+            shadow_probe["passed"] = bool(base_ok and probe.get("gates", {}).get("F3_OFFICIAL_STATUS", {}).get("passed"))
+            shadow_probe["reject_reason"] = [x for x in probe.get("reject_reason", []) if x != "F4_OR_F5_MOMENTUM"]
+            shadow_record = {**base, "fixed_pool": shadow_probe}
+            shadow_audit.append(shadow_record)
+            if shadow_probe["passed"]:
+                shadow_qualified.append(shadow_record)
         except Exception as exc:
             audit.append({**base, "fixed_pool": {"strategy_version": A5_N_FIXED_POOL_VERSION,
                 "passed": False, "reject_reason": [f"FIXED_BUILD_ERROR:{exc}"]}})
+            shadow_audit.append({**base, "fixed_pool": {"strategy_version": A5_N_FIXED_POOL_VERSION + "-momentum-rank-shadow",
+                "shadow_only": True, "ntfy_eligible": False, "passed": False,
+                "reject_reason": [f"FIXED_BUILD_ERROR:{exc}"]}})
     qualified.sort(key=fixed_pool_rank_key, reverse=True)
     pre_cap_count = len(qualified)
     cap_applied = pre_cap_count > int(A5_N_FIXED_POOL_CONFIG["hard_cap_trigger_count"])
     kept = qualified[:int(A5_N_FIXED_POOL_CONFIG["hard_cap_count"])] if cap_applied else qualified
+    shadow_qualified.sort(key=fixed_pool_rank_key, reverse=True)
+    shadow_pre_cap_count = len(shadow_qualified)
+    shadow_cap_applied = shadow_pre_cap_count > int(A5_N_FIXED_POOL_CONFIG["hard_cap_trigger_count"])
+    shadow_kept = shadow_qualified[:int(A5_N_FIXED_POOL_CONFIG["hard_cap_count"])] if shadow_cap_applied else shadow_qualified
     valid_from = anchor + pd.Timedelta(days=3)
     valid_through = valid_from + pd.Timedelta(days=4)
     reject_counts: dict[str, int] = {}
@@ -3176,10 +3198,34 @@ def build_a5n_weekly_fixed_pool(
         "candidates": kept}
     LEDGER_DIR.mkdir(parents=True, exist_ok=True)
     A5_N_FIXED_POOL_PATH.write_text(json.dumps(payload, ensure_ascii=False, default=str, indent=2), encoding="utf-8")
-    with A5_N_FIXED_POOL_LEDGER_PATH.open("a", encoding="utf-8") as fh:
-        for record in audit:
-            fh.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+    def replace_same_anchor(path: Path, records: list[dict[str, Any]]) -> None:
+        retained: list[str] = []
+        if path.exists():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                try:
+                    old = json.loads(line)
+                    old_anchor = old.get("fixed_pool", {}).get("anchor_date")
+                    if old_anchor != str(anchor.date()):
+                        retained.append(line)
+                except json.JSONDecodeError:
+                    retained.append(line)
+        retained.extend(json.dumps(x, ensure_ascii=False, default=str) for x in records)
+        path.write_text("\n".join(retained) + "\n", encoding="utf-8")
+
+    replace_same_anchor(A5_N_FIXED_POOL_LEDGER_PATH, audit)
+    shadow_payload = {**payload,
+        "strategy_version": A5_N_FIXED_POOL_VERSION + "-momentum-rank-shadow",
+        "parameter_status": "research_shadow_momentum_rank_only",
+        "shadow_only": True, "ntfy_enabled": False, "momentum_required": False,
+        "qualified_count_before_cap": shadow_pre_cap_count,
+        "kept_count": len(shadow_kept), "cap_applied": shadow_cap_applied,
+        "below_target_warning": len(shadow_kept) < int(A5_N_FIXED_POOL_CONFIG["target_min_count"]),
+        "above_target_warning": len(shadow_kept) > int(A5_N_FIXED_POOL_CONFIG["target_max_count"]),
+        "candidates": shadow_kept}
+    A5_N_FIXED_SHADOW_POOL_PATH.write_text(json.dumps(shadow_payload, ensure_ascii=False, default=str, indent=2), encoding="utf-8")
+    replace_same_anchor(A5_N_FIXED_SHADOW_POOL_LEDGER_PATH, shadow_audit)
     print(f"[fixed-pool] qualified={pre_cap_count} kept={len(kept)} valid={valid_from.date()}..{valid_through.date()}")
+    print(f"[fixed-pool-momentum-rank-shadow] qualified={shadow_pre_cap_count} kept={len(shadow_kept)} ntfy=false")
     return kept
 
 
@@ -3202,6 +3248,61 @@ def load_a5n_fixed_pool_universe(cfg: Config) -> pd.DataFrame:
             "a5n_daytrade_eligible": True, "a5n_candidate_source": "A5_N_FIXED_POOL",
             "a5n_fixed_qualification": x["fixed_pool"], "a5n_current_official_status": status})
     return pd.DataFrame(rows)
+
+
+def run_a5n_fixed_momentum_rank_shadow_scan(
+    cfg: Config, as_of: dt.datetime | None = None,
+) -> list[dict[str, Any]]:
+    """Run the expanded momentum-as-ranking pool; never enters formal ntfy."""
+    if not A5_N_FIXED_SHADOW_POOL_PATH.exists():
+        raise RuntimeError(f"A5-N fixed shadow pool missing: {A5_N_FIXED_SHADOW_POOL_PATH}")
+    payload = json.loads(A5_N_FIXED_SHADOW_POOL_PATH.read_text(encoding="utf-8"))
+    now = as_of or dt.datetime.now(TAIPEI_TZ)
+    today = pd.Timestamp(now).date()
+    if not (pd.Timestamp(payload["valid_from"]).date() <= today <= pd.Timestamp(payload["valid_through"]).date()):
+        raise RuntimeError(f"A5-N fixed shadow pool not valid on {today}")
+    run_id = str(uuid.uuid4())
+    rows: list[dict[str, Any]] = []
+    for item in payload.get("candidates", []):
+        stock_id, market_type = str(item["stock_id"]), str(item["market_type"])
+        try:
+            eligible, status = a5n_official_daytrade_eligibility(stock_id, cfg, today)
+            if not eligible:
+                rows.append({"stock_id": stock_id, "stock_name": item.get("stock_name", ""),
+                    "strategy_state": "REJECTED", "reject_reason": ["F3_CURRENT_DAY_OFFICIAL_STATUS"],
+                    "official_daytrade_eligibility": status})
+                continue
+            daily = get_yahoo_daily(stock_id, market_type, cfg)
+            hourly = get_yahoo_intraday(stock_id, market_type, cfg)
+            five = get_yahoo_5m_intraday(stock_id, market_type, cfg)
+            qualification = item.get("fixed_pool", {})
+            row = pd.Series({"stock_id": stock_id, "stock_name": item.get("stock_name", ""),
+                "type": market_type, "last_close": qualification.get("gates", {}).get("F1_PRICE_BAND", {}).get("raw", {}).get("close", 0),
+                "Trading_Volume": qualification.get("ranking", {}).get("average_volume_20d_shares", 0)})
+            result = evaluate_a5n(row=row, daily=daily, hourly=hourly, five_min=five,
+                as_of=now, add_indicators=add_indicators, keep_completed_5m=keep_completed_5m_bars,
+                daytrade_ok=True, daytrade_reasons=[], max_price=cfg.max_price,
+                min_volume_shares=cfg.daytrade_min_volume_shares,
+                min_turnover=cfg.daytrade_min_turnover, daily_prequalified=qualification)
+            result.update({"stock_id": stock_id, "stock_name": item.get("stock_name", ""),
+                "market_type": market_type, "run_id": run_id,
+                "scan_started_at": pd.Timestamp(now).isoformat(),
+                "strategy_version": A5_N_FIXED_POOL_VERSION + "-momentum-rank-shadow",
+                "shadow_only": True, "ntfy_eligible": False})
+            rows.append(result)
+        except Exception as exc:
+            rows.append({"stock_id": stock_id, "stock_name": item.get("stock_name", ""),
+                "run_id": run_id, "scan_started_at": pd.Timestamp(now).isoformat(),
+                "strategy_version": A5_N_FIXED_POOL_VERSION + "-momentum-rank-shadow",
+                "strategy_state": "REJECTED", "shadow_only": True, "ntfy_eligible": False,
+                "reject_reason": [f"FIXED_SHADOW_SCAN_ERROR:{exc}"]})
+    LEDGER_DIR.mkdir(parents=True, exist_ok=True)
+    with A5_N_FIXED_SHADOW_SIGNAL_LEDGER_PATH.open("a", encoding="utf-8") as fh:
+        for result in rows:
+            fh.write(json.dumps(result, ensure_ascii=False, default=str) + "\n")
+    counts = pd.Series([x.get("strategy_state") for x in rows]).value_counts().to_dict()
+    print(f"[fixed-pool-momentum-rank-shadow-scan] count={len(rows)} states={counts} ntfy=false")
+    return rows
 
 
 def build_a5n_premarket_pool(cfg: Config, as_of: dt.datetime | None = None) -> list[dict[str, Any]]:
@@ -5209,6 +5310,8 @@ def main() -> int:
         results = run(cfg, market, universe_override=pool_universe)
         if args.a5n_scan_pool:
             run_a5n_b_shadow_scan(cfg)
+        if args.a5n_scan_fixed_pool:
+            run_a5n_fixed_momentum_rank_shadow_scan(cfg)
         revalidate_a5n_entries(results, cfg)
         if args.intraday_ntfy:
             message = format_intraday_ntfy_message(results, market)
