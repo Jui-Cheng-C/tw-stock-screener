@@ -108,7 +108,7 @@ jobs:
           fi
 
   intraday-ntfy:
-    if: (github.event_name == 'schedule' && (github.event.schedule == '16,26 1 * * 1-5' || github.event.schedule == '31 1 * * 1-5')) || (github.event_name == 'workflow_dispatch' && (inputs.mode == 'scan-a5n-pool' || inputs.mode == 'scan-a5n-fixed-pool'))
+    if: github.event_name == 'repository_dispatch' || (github.event_name == 'schedule' && (github.event.schedule == '16,26 1 * * 1-5' || github.event.schedule == '31 1 * * 1-5')) || (github.event_name == 'workflow_dispatch' && (inputs.mode == 'scan-a5n-pool' || inputs.mode == 'scan-a5n-fixed-pool'))
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -140,12 +140,32 @@ jobs:
         if: (github.event_name == 'schedule' && github.event.schedule == '31 1 * * 1-5') || (github.event_name == 'workflow_dispatch' && inputs.mode == 'scan-a5n-fixed-pool')
         run: python tw_stock_screener.py --a5n-scan-fixed-pool
 
+      - name: Route repository dispatch to A5-N by Taiwan time
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          hour="$(TZ=Asia/Taipei date +%H)"
+          minute="$(TZ=Asia/Taipei date +%M)"
+          echo "Repository dispatch at Taiwan ${hour}:${minute}"
+          if [ "${hour}" = "08" ]; then
+            python tw_stock_screener.py --a5n-build-pool
+          elif [ "${hour}" = "09" ] && [ "${minute}" -le 35 ]; then
+            if ! python tw_stock_screener.py --a5n-scan-pool; then
+              echo "Strict pool missing/stale; rebuild then retry."
+              python tw_stock_screener.py --a5n-build-pool
+              python tw_stock_screener.py --a5n-scan-pool
+            fi
+          elif [ "${hour}" = "09" ]; then
+            python tw_stock_screener.py --a5n-scan-fixed-pool
+          else
+            echo "Repository dispatch is outside A5-N 08:00-09:59 window; skip A5-N."
+          fi
+
       - name: Persist raw signal ledgers
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ledgers/*.jsonl 2>/dev/null || true
+          git add ledgers/*.jsonl ledgers/a5n_daily_candidate_pool.json ledgers/a5n_b_shadow_candidate_pool.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Update raw signal ledgers"
             git pull --rebase
