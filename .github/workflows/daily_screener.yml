@@ -232,7 +232,9 @@ jobs:
           echo "run_mode=skip" >> "$GITHUB_OUTPUT"
 
       - name: Run intraday ntfy alert check
-        if: steps.delivery-window.outputs.run_mode == 'intraday'
+        # repository_dispatch is handled by the dedicated A5-N job above.
+        # Do not also emit the legacy combined A4/A5 market-skip message.
+        if: steps.delivery-window.outputs.run_mode == 'intraday' && github.event_name != 'repository_dispatch'
         run: python tw_stock_screener.py --intraday-ntfy
 
       - name: Run screener and send email report
