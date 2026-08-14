@@ -1,10 +1,10 @@
 {
   "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
   "parameter_status": "research_default",
-  "built_at": "2026-08-13T23:23:19.403183+08:00",
-  "anchor_date": "2026-08-07",
-  "valid_from": "2026-08-10",
-  "valid_through": "2026-08-14",
+  "built_at": "2026-08-14T18:31:06.920085+08:00",
+  "anchor_date": "2026-08-14",
+  "valid_from": "2026-08-17",
+  "valid_through": "2026-08-21",
   "data_cutoff_rule": "completed daily bars through Friday close only",
   "official_status_note": "Friday official status; revalidated on the 09:31 scan date",
   "config": {
@@ -34,38 +34,38 @@
   },
   "mother_count": 2148,
   "evaluated_count": 2148,
-  "qualified_count_before_cap": 22,
-  "kept_count": 22,
+  "qualified_count_before_cap": 36,
+  "kept_count": 36,
   "cap_applied": false,
   "below_target_warning": true,
   "above_target_warning": false,
   "gate_pass_counts": {
-    "F1_PRICE_BAND": 740,
-    "F2_LIQUIDITY": 149,
-    "F3_OFFICIAL_STATUS": 141,
-    "F4_MOMENTUM_A": 304,
-    "F5_MOMENTUM_B": 47
+    "F1_PRICE_BAND": 736,
+    "F2_LIQUIDITY": 137,
+    "F3_OFFICIAL_STATUS": 132,
+    "F4_MOMENTUM_A": 563,
+    "F5_MOMENTUM_B": 25
   },
-  "official_lookup_count": 149,
+  "official_lookup_count": 137,
   "reject_reason_counts": {
-    "F2_LIQUIDITY": 1829,
-    "F4_OR_F5_MOMENTUM": 1637,
-    "F1_PRICE_BAND": 1238,
-    "FIXED_DATA_EMPTY": 163,
-    "FIXED_DATA_INSUFFICIENT": 7,
-    "F3_OFFICIAL_STATUS": 8
+    "F2_LIQUIDITY": 1824,
+    "F4_OR_F5_MOMENTUM": 1377,
+    "F1_PRICE_BAND": 1225,
+    "FIXED_DATA_EMPTY": 177,
+    "FIXED_DATA_INSUFFICIENT": 10,
+    "F3_OFFICIAL_STATUS": 5
   },
   "candidates": [
     {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "3231",
-      "stock_name": "緯創",
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "2344",
+      "stock_name": "華邦電",
       "market_type": "twse",
       "fixed_pool": {
         "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
         "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
+        "anchor_date": "2026-08-14",
         "gates": {
           "F1_PRICE_BAND": {
             "passed": true,
@@ -81,7 +81,7 @@
           "F2_LIQUIDITY": {
             "passed": true,
             "raw": {
-              "average_volume_20d_shares": 97179540,
+              "average_volume_20d_shares": 143686572,
               "minimum_shares": 800000,
               "completed_bars": 20
             }
@@ -90,7 +90,7 @@
             "passed": true,
             "raw": {
               "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
+              "date": "2026-08-14",
               "BuyAfterSale": "",
               "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
             }
@@ -99,8 +99,78 @@
             "passed": true,
             "raw": {
               "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 8.390049738327832,
-              "signal": 6.864782978324665,
+              "dif": 5.992965735710925,
+              "signal": 1.371460650030997,
+              "above_zero_now": true,
+              "crossed_this_week": true
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                5.557851003491059,
+                4.839592046159822,
+                4.621505085679928
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 143686572,
+          "distance_to_band_midpoint": 33.55000000000001
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "3231",
+      "stock_name": "緯創",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 193.5,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 105344350,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 7.779416449465856,
+              "signal": 7.74172778166904,
               "above_zero_now": true,
               "crossed_this_week": false
             }
@@ -110,9 +180,9 @@
             "raw": {
               "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
               "histogram_sequence": [
-                3.5402721762616007,
-                2.816479422131674,
-                1.5252667600031673
+                0.613148185263487,
+                0.5712542766350586,
+                0.03768866779681623
               ]
             }
           }
@@ -121,26 +191,26 @@
         "reject_reason": [],
         "ranking": {
           "momentum_a_priority": 1,
-          "average_volume_20d_shares": 97179540,
-          "distance_to_band_midpoint": 33.55000000000001
+          "average_volume_20d_shares": 105344350,
+          "distance_to_band_midpoint": 43.55000000000001
         }
       }
     },
     {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
       "stock_id": "2332",
       "stock_name": "友訊",
       "market_type": "twse",
       "fixed_pool": {
         "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
         "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
+        "anchor_date": "2026-08-14",
         "gates": {
           "F1_PRICE_BAND": {
             "passed": true,
             "raw": {
-              "close": 22.149999618530273,
+              "close": 22.600000381469727,
               "matched_band": {
                 "minimum": 10.0,
                 "maximum": 24.9,
@@ -151,7 +221,7 @@
           "F2_LIQUIDITY": {
             "passed": true,
             "raw": {
-              "average_volume_20d_shares": 61273729,
+              "average_volume_20d_shares": 52846967,
               "minimum_shares": 3000000,
               "completed_bars": 20
             }
@@ -160,7 +230,7 @@
             "passed": true,
             "raw": {
               "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
+              "date": "2026-08-14",
               "BuyAfterSale": "",
               "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
             }
@@ -169,20 +239,20 @@
             "passed": true,
             "raw": {
               "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 0.206971774529908,
-              "signal": 0.4330314250593162,
+              "dif": 0.11000967750623047,
+              "signal": 0.25257489168709346,
               "above_zero_now": true,
               "crossed_this_week": false
             }
           },
           "F5_MOMENTUM_B": {
-            "passed": false,
+            "passed": true,
             "raw": {
               "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
               "histogram_sequence": [
-                -0.17743605946276397,
-                -0.18050910047618363,
-                -0.22605965052940818
+                -0.17397740453415766,
+                -0.15537608768936595,
+                -0.142565214180863
               ]
             }
           }
@@ -191,96 +261,26 @@
         "reject_reason": [],
         "ranking": {
           "momentum_a_priority": 1,
-          "average_volume_20d_shares": 61273729,
-          "distance_to_band_midpoint": 4.699999618530274
+          "average_volume_20d_shares": 52846967,
+          "distance_to_band_midpoint": 5.150000381469727
         }
       }
     },
     {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "2610",
-      "stock_name": "華航",
-      "market_type": "twse",
-      "fixed_pool": {
-        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
-        "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
-        "gates": {
-          "F1_PRICE_BAND": {
-            "passed": true,
-            "raw": {
-              "close": 22.5,
-              "matched_band": {
-                "minimum": 10.0,
-                "maximum": 24.9,
-                "avg_volume_20d_min_shares": 3000000
-              }
-            }
-          },
-          "F2_LIQUIDITY": {
-            "passed": true,
-            "raw": {
-              "average_volume_20d_shares": 42975542,
-              "minimum_shares": 3000000,
-              "completed_bars": 20
-            }
-          },
-          "F3_OFFICIAL_STATUS": {
-            "passed": true,
-            "raw": {
-              "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
-              "BuyAfterSale": "",
-              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-            }
-          },
-          "F4_MOMENTUM_A": {
-            "passed": true,
-            "raw": {
-              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 0.28486447634920253,
-              "signal": 0.1615402271579448,
-              "above_zero_now": true,
-              "crossed_this_week": true
-            }
-          },
-          "F5_MOMENTUM_B": {
-            "passed": false,
-            "raw": {
-              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
-              "histogram_sequence": [
-                0.20163032137670953,
-                0.14019659814901614,
-                0.12332424919125773
-              ]
-            }
-          }
-        },
-        "passed": true,
-        "reject_reason": [],
-        "ranking": {
-          "momentum_a_priority": 1,
-          "average_volume_20d_shares": 42975542,
-          "distance_to_band_midpoint": 5.050000000000001
-        }
-      }
-    },
-    {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
       "stock_id": "2002",
       "stock_name": "中鋼",
       "market_type": "twse",
       "fixed_pool": {
         "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
         "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
+        "anchor_date": "2026-08-14",
         "gates": {
           "F1_PRICE_BAND": {
             "passed": true,
             "raw": {
-              "close": 19.049999237060547,
+              "close": 19.0,
               "matched_band": {
                 "minimum": 10.0,
                 "maximum": 24.9,
@@ -291,7 +291,7 @@
           "F2_LIQUIDITY": {
             "passed": true,
             "raw": {
-              "average_volume_20d_shares": 40020350,
+              "average_volume_20d_shares": 47007679,
               "minimum_shares": 3000000,
               "completed_bars": 20
             }
@@ -300,7 +300,7 @@
             "passed": true,
             "raw": {
               "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
+              "date": "2026-08-14",
               "BuyAfterSale": "",
               "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
             }
@@ -309,8 +309,8 @@
             "passed": true,
             "raw": {
               "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 0.039743573942018884,
-              "signal": 0.036122987694832465,
+              "dif": 0.11088846329882074,
+              "signal": 0.11367468406877411,
               "above_zero_now": true,
               "crossed_this_week": false
             }
@@ -320,9 +320,9 @@
             "raw": {
               "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
               "histogram_sequence": [
-                -0.013887996819644366,
-                -0.005306717554705825,
-                0.003620586247186419
+                0.10533186157871505,
+                0.05131026000287266,
+                -0.002786220769953371
               ]
             }
           }
@@ -331,96 +331,26 @@
         "reject_reason": [],
         "ranking": {
           "momentum_a_priority": 1,
-          "average_volume_20d_shares": 40020350,
-          "distance_to_band_midpoint": 1.5999992370605476
+          "average_volume_20d_shares": 47007679,
+          "distance_to_band_midpoint": 1.5500000000000007
         }
       }
     },
     {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "2801",
-      "stock_name": "彰銀",
-      "market_type": "twse",
-      "fixed_pool": {
-        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
-        "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
-        "gates": {
-          "F1_PRICE_BAND": {
-            "passed": true,
-            "raw": {
-              "close": 23.149999618530273,
-              "matched_band": {
-                "minimum": 10.0,
-                "maximum": 24.9,
-                "avg_volume_20d_min_shares": 3000000
-              }
-            }
-          },
-          "F2_LIQUIDITY": {
-            "passed": true,
-            "raw": {
-              "average_volume_20d_shares": 37028293,
-              "minimum_shares": 3000000,
-              "completed_bars": 20
-            }
-          },
-          "F3_OFFICIAL_STATUS": {
-            "passed": true,
-            "raw": {
-              "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
-              "BuyAfterSale": "",
-              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-            }
-          },
-          "F4_MOMENTUM_A": {
-            "passed": true,
-            "raw": {
-              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 0.03065010940660784,
-              "signal": 0.22968132966967802,
-              "above_zero_now": true,
-              "crossed_this_week": false
-            }
-          },
-          "F5_MOMENTUM_B": {
-            "passed": false,
-            "raw": {
-              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
-              "histogram_sequence": [
-                -0.04536277094681568,
-                -0.14854595943078197,
-                -0.19903122026307019
-              ]
-            }
-          }
-        },
-        "passed": true,
-        "reject_reason": [],
-        "ranking": {
-          "momentum_a_priority": 1,
-          "average_volume_20d_shares": 37028293,
-          "distance_to_band_midpoint": 5.699999618530274
-        }
-      }
-    },
-    {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
       "stock_id": "1101",
       "stock_name": "台泥",
       "market_type": "twse",
       "fixed_pool": {
         "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
         "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
+        "anchor_date": "2026-08-14",
         "gates": {
           "F1_PRICE_BAND": {
             "passed": true,
             "raw": {
-              "close": 24.350000381469727,
+              "close": 24.25,
               "matched_band": {
                 "minimum": 10.0,
                 "maximum": 24.9,
@@ -431,7 +361,7 @@
           "F2_LIQUIDITY": {
             "passed": true,
             "raw": {
-              "average_volume_20d_shares": 28506088,
+              "average_volume_20d_shares": 26287306,
               "minimum_shares": 3000000,
               "completed_bars": 20
             }
@@ -440,7 +370,7 @@
             "passed": true,
             "raw": {
               "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
+              "date": "2026-08-14",
               "BuyAfterSale": "",
               "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
             }
@@ -449,8 +379,8 @@
             "passed": true,
             "raw": {
               "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 0.1137954853474703,
-              "signal": 0.09964617937235665,
+              "dif": 0.1046210423638314,
+              "signal": 0.12573367585382145,
               "above_zero_now": true,
               "crossed_this_week": false
             }
@@ -460,9 +390,9 @@
             "raw": {
               "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
               "histogram_sequence": [
-                -0.03870383843311517,
-                -0.0036414766209193483,
-                0.014149305975113657
+                0.040492173151440936,
+                -0.009450172096533482,
+                -0.02111263348999004
               ]
             }
           }
@@ -471,26 +401,26 @@
         "reject_reason": [],
         "ranking": {
           "momentum_a_priority": 1,
-          "average_volume_20d_shares": 28506088,
-          "distance_to_band_midpoint": 6.900000381469727
+          "average_volume_20d_shares": 26287306,
+          "distance_to_band_midpoint": 6.800000000000001
         }
       }
     },
     {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "2881",
-      "stock_name": "富邦金",
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "2882",
+      "stock_name": "國泰金",
       "market_type": "twse",
       "fixed_pool": {
         "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
         "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
+        "anchor_date": "2026-08-14",
         "gates": {
           "F1_PRICE_BAND": {
             "passed": true,
             "raw": {
-              "close": 127.0,
+              "close": 101.5,
               "matched_band": {
                 "minimum": 100.0,
                 "maximum": 199.9,
@@ -501,7 +431,7 @@
           "F2_LIQUIDITY": {
             "passed": true,
             "raw": {
-              "average_volume_20d_shares": 23008879,
+              "average_volume_20d_shares": 20793523,
               "minimum_shares": 800000,
               "completed_bars": 20
             }
@@ -510,7 +440,7 @@
             "passed": true,
             "raw": {
               "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
+              "date": "2026-08-14",
               "BuyAfterSale": "",
               "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
             }
@@ -519,8 +449,8 @@
             "passed": true,
             "raw": {
               "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 0.4568425412318362,
-              "signal": 0.510823134257376,
+              "dif": 0.8011152122850831,
+              "signal": 0.5570179475951931,
               "above_zero_now": true,
               "crossed_this_week": false
             }
@@ -530,9 +460,9 @@
             "raw": {
               "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
               "histogram_sequence": [
-                0.3739881261921738,
-                0.05051299723459124,
-                -0.053980593025539814
+                0.23821593252256468,
+                0.14125454720777975,
+                0.24409726468989001
               ]
             }
           }
@@ -541,26 +471,96 @@
         "reject_reason": [],
         "ranking": {
           "momentum_a_priority": 1,
-          "average_volume_20d_shares": 23008879,
-          "distance_to_band_midpoint": 22.94999999999999
+          "average_volume_20d_shares": 20793523,
+          "distance_to_band_midpoint": 48.44999999999999
         }
       }
     },
     {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "1714",
+      "stock_name": "和桐",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 16.399999618530273,
+              "matched_band": {
+                "minimum": 10.0,
+                "maximum": 24.9,
+                "avg_volume_20d_min_shares": 3000000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 20495092,
+              "minimum_shares": 3000000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 0.3755952746428992,
+              "signal": 0.01299031204666111,
+              "above_zero_now": true,
+              "crossed_this_week": true
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                0.5509743555318174,
+                0.4705570792961638,
+                0.3626049625962381
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 20495092,
+          "distance_to_band_midpoint": 1.0500003814697259
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
       "stock_id": "2377",
       "stock_name": "微星",
       "market_type": "twse",
       "fixed_pool": {
         "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
         "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
+        "anchor_date": "2026-08-14",
         "gates": {
           "F1_PRICE_BAND": {
             "passed": true,
             "raw": {
-              "close": 153.0,
+              "close": 159.0,
               "matched_band": {
                 "minimum": 100.0,
                 "maximum": 199.9,
@@ -571,7 +571,7 @@
           "F2_LIQUIDITY": {
             "passed": true,
             "raw": {
-              "average_volume_20d_shares": 16179346,
+              "average_volume_20d_shares": 19085427,
               "minimum_shares": 800000,
               "completed_bars": 20
             }
@@ -580,7 +580,7 @@
             "passed": true,
             "raw": {
               "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
+              "date": "2026-08-14",
               "BuyAfterSale": "",
               "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
             }
@@ -589,8 +589,148 @@
             "passed": true,
             "raw": {
               "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 2.239837651239384,
-              "signal": 1.0265159328849998,
+              "dif": 5.008664441168776,
+              "signal": 3.3101276534189736,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                2.3051824532839316,
+                2.6029399601109486,
+                1.698536787749802
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 19085427,
+          "distance_to_band_midpoint": 9.050000000000011
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "2881",
+      "stock_name": "富邦金",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 129.5,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 18524766,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 0.5844604985654485,
+              "signal": 0.4990163331430928,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                -0.10989761483587146,
+                -0.03723311475315416,
+                0.08544416542235567
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 18524766,
+          "distance_to_band_midpoint": 20.44999999999999
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "5314",
+      "stock_name": "世紀*",
+      "market_type": "tpex",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 16.200000762939453,
+              "matched_band": {
+                "minimum": 10.0,
+                "maximum": 24.9,
+                "avg_volume_20d_min_shares": 3000000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 14427044,
+              "minimum_shares": 3000000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "＊",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 0.3940614867233645,
+              "signal": 0.016588253308016956,
               "above_zero_now": true,
               "crossed_this_week": true
             }
@@ -600,9 +740,9 @@
             "raw": {
               "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
               "histogram_sequence": [
-                0.5154605422652059,
-                1.0883287607840684,
-                1.213321718354384
+                0.35019738702596515,
+                0.2992591643837262,
+                0.37747323341534755
               ]
             }
           }
@@ -611,231 +751,91 @@
         "reject_reason": [],
         "ranking": {
           "momentum_a_priority": 1,
-          "average_volume_20d_shares": 16179346,
-          "distance_to_band_midpoint": 3.0500000000000114
+          "average_volume_20d_shares": 14427044,
+          "distance_to_band_midpoint": 1.2499992370605462
         }
       }
     },
     {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "2464",
+      "stock_name": "盟立",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 192.0,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 11777730,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 11.961605045074606,
+              "signal": 6.7954229651674725,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                6.974279490514034,
+                6.447270751340703,
+                5.166182079907133
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 11777730,
+          "distance_to_band_midpoint": 42.05000000000001
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
       "stock_id": "3702",
       "stock_name": "大聯大",
       "market_type": "twse",
       "fixed_pool": {
         "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
         "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
-        "gates": {
-          "F1_PRICE_BAND": {
-            "passed": true,
-            "raw": {
-              "close": 122.5,
-              "matched_band": {
-                "minimum": 100.0,
-                "maximum": 199.9,
-                "avg_volume_20d_min_shares": 800000
-              }
-            }
-          },
-          "F2_LIQUIDITY": {
-            "passed": true,
-            "raw": {
-              "average_volume_20d_shares": 12473172,
-              "minimum_shares": 800000,
-              "completed_bars": 20
-            }
-          },
-          "F3_OFFICIAL_STATUS": {
-            "passed": true,
-            "raw": {
-              "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
-              "BuyAfterSale": "",
-              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-            }
-          },
-          "F4_MOMENTUM_A": {
-            "passed": true,
-            "raw": {
-              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 3.122932521663131,
-              "signal": 1.6480721150127315,
-              "above_zero_now": true,
-              "crossed_this_week": false
-            }
-          },
-          "F5_MOMENTUM_B": {
-            "passed": false,
-            "raw": {
-              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
-              "histogram_sequence": [
-                1.521878288804681,
-                1.7725739219672123,
-                1.4748604066503994
-              ]
-            }
-          }
-        },
-        "passed": true,
-        "reject_reason": [],
-        "ranking": {
-          "momentum_a_priority": 1,
-          "average_volume_20d_shares": 12473172,
-          "distance_to_band_midpoint": 27.44999999999999
-        }
-      }
-    },
-    {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "3605",
-      "stock_name": "宏致",
-      "market_type": "twse",
-      "fixed_pool": {
-        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
-        "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
-        "gates": {
-          "F1_PRICE_BAND": {
-            "passed": true,
-            "raw": {
-              "close": 107.5,
-              "matched_band": {
-                "minimum": 100.0,
-                "maximum": 199.9,
-                "avg_volume_20d_min_shares": 800000
-              }
-            }
-          },
-          "F2_LIQUIDITY": {
-            "passed": true,
-            "raw": {
-              "average_volume_20d_shares": 9071943,
-              "minimum_shares": 800000,
-              "completed_bars": 20
-            }
-          },
-          "F3_OFFICIAL_STATUS": {
-            "passed": true,
-            "raw": {
-              "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
-              "BuyAfterSale": "Y",
-              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-            }
-          },
-          "F4_MOMENTUM_A": {
-            "passed": true,
-            "raw": {
-              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 4.977658096564284,
-              "signal": 2.0079155104764252,
-              "above_zero_now": true,
-              "crossed_this_week": true
-            }
-          },
-          "F5_MOMENTUM_B": {
-            "passed": false,
-            "raw": {
-              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
-              "histogram_sequence": [
-                1.3431619759437785,
-                2.5700299813567478,
-                2.9697425860878583
-              ]
-            }
-          }
-        },
-        "passed": true,
-        "reject_reason": [],
-        "ranking": {
-          "momentum_a_priority": 1,
-          "average_volume_20d_shares": 9071943,
-          "distance_to_band_midpoint": 42.44999999999999
-        }
-      }
-    },
-    {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "6919",
-      "stock_name": "康霈*",
-      "market_type": "twse",
-      "fixed_pool": {
-        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
-        "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
-        "gates": {
-          "F1_PRICE_BAND": {
-            "passed": true,
-            "raw": {
-              "close": 105.0,
-              "matched_band": {
-                "minimum": 100.0,
-                "maximum": 199.9,
-                "avg_volume_20d_min_shares": 800000
-              }
-            }
-          },
-          "F2_LIQUIDITY": {
-            "passed": true,
-            "raw": {
-              "average_volume_20d_shares": 5734458,
-              "minimum_shares": 800000,
-              "completed_bars": 20
-            }
-          },
-          "F3_OFFICIAL_STATUS": {
-            "passed": true,
-            "raw": {
-              "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
-              "BuyAfterSale": "",
-              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-            }
-          },
-          "F4_MOMENTUM_A": {
-            "passed": true,
-            "raw": {
-              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 0.8008810575101819,
-              "signal": 0.5296727890143282,
-              "above_zero_now": true,
-              "crossed_this_week": false
-            }
-          },
-          "F5_MOMENTUM_B": {
-            "passed": false,
-            "raw": {
-              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
-              "histogram_sequence": [
-                0.6798354758972943,
-                0.5970091629478834,
-                0.27120826849585367
-              ]
-            }
-          }
-        },
-        "passed": true,
-        "reject_reason": [],
-        "ranking": {
-          "momentum_a_priority": 1,
-          "average_volume_20d_shares": 5734458,
-          "distance_to_band_midpoint": 44.94999999999999
-        }
-      }
-    },
-    {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "3005",
-      "stock_name": "神基",
-      "market_type": "twse",
-      "fixed_pool": {
-        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
-        "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
+        "anchor_date": "2026-08-14",
         "gates": {
           "F1_PRICE_BAND": {
             "passed": true,
@@ -851,7 +851,7 @@
           "F2_LIQUIDITY": {
             "passed": true,
             "raw": {
-              "average_volume_20d_shares": 4584377,
+              "average_volume_20d_shares": 11328284,
               "minimum_shares": 800000,
               "completed_bars": 20
             }
@@ -860,7 +860,7 @@
             "passed": true,
             "raw": {
               "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
+              "date": "2026-08-14",
               "BuyAfterSale": "",
               "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
             }
@@ -869,8 +869,8 @@
             "passed": true,
             "raw": {
               "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 1.2624496738191056,
-              "signal": 1.1469396045256388,
+              "dif": 1.9189411648288655,
+              "signal": 2.5855045573842688,
               "above_zero_now": true,
               "crossed_this_week": false
             }
@@ -880,9 +880,9 @@
             "raw": {
               "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
               "histogram_sequence": [
-                0.0287326624898383,
-                0.13450032073690843,
-                0.11551006929346674
+                0.7759770869573765,
+                0.38905680660686315,
+                -0.6665633925554033
               ]
             }
           }
@@ -891,26 +891,26 @@
         "reject_reason": [],
         "ranking": {
           "momentum_a_priority": 1,
-          "average_volume_20d_shares": 4584377,
+          "average_volume_20d_shares": 11328284,
           "distance_to_band_midpoint": 34.94999999999999
         }
       }
     },
     {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "3022",
-      "stock_name": "威強電",
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "3605",
+      "stock_name": "宏致",
       "market_type": "twse",
       "fixed_pool": {
         "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
         "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
+        "anchor_date": "2026-08-14",
         "gates": {
           "F1_PRICE_BAND": {
             "passed": true,
             "raw": {
-              "close": 103.0,
+              "close": 131.5,
               "matched_band": {
                 "minimum": 100.0,
                 "maximum": 199.9,
@@ -921,7 +921,7 @@
           "F2_LIQUIDITY": {
             "passed": true,
             "raw": {
-              "average_volume_20d_shares": 3251203,
+              "average_volume_20d_shares": 10875426,
               "minimum_shares": 800000,
               "completed_bars": 20
             }
@@ -930,7 +930,7 @@
             "passed": true,
             "raw": {
               "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
+              "date": "2026-08-14",
               "BuyAfterSale": "",
               "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
             }
@@ -939,8 +939,8 @@
             "passed": true,
             "raw": {
               "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 3.457149032068216,
-              "signal": 1.7544672522658908,
+              "dif": 10.904894978127047,
+              "signal": 6.537430225316119,
               "above_zero_now": true,
               "crossed_this_week": false
             }
@@ -950,9 +950,9 @@
             "raw": {
               "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
               "histogram_sequence": [
-                0.7446967578577797,
-                1.3037392097963094,
-                1.702681779802325
+                3.4008522006856277,
+                4.349293003588782,
+                4.367464752810927
               ]
             }
           }
@@ -961,26 +961,446 @@
         "reject_reason": [],
         "ranking": {
           "momentum_a_priority": 1,
-          "average_volume_20d_shares": 3251203,
-          "distance_to_band_midpoint": 46.94999999999999
+          "average_volume_20d_shares": 10875426,
+          "distance_to_band_midpoint": 18.44999999999999
         }
       }
     },
     {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "2359",
+      "stock_name": "所羅門",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 159.5,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 8507635,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 4.528561626825024,
+              "signal": 1.8471354325215221,
+              "above_zero_now": true,
+              "crossed_this_week": true
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                1.2115580711892848,
+                2.1422497444813735,
+                2.6814261943035014
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 8507635,
+          "distance_to_band_midpoint": 9.550000000000011
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "3362",
+      "stock_name": "先進光",
+      "market_type": "tpex",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 172.0,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 7422008,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 2.2506051379419603,
+              "signal": 1.8436032718140491,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                1.3051449857282609,
+                1.334099085616082,
+                0.4070018661279111
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 7422008,
+          "distance_to_band_midpoint": 22.05000000000001
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "6166",
+      "stock_name": "凌華",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 129.5,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 5473742,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": -0.33398383105463836,
+              "signal": 0.14925406621522655,
+              "above_zero_now": false,
+              "crossed_this_week": true
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                0.5110103280111167,
+                0.3203279755108319,
+                -0.4832378972698649
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 5473742,
+          "distance_to_band_midpoint": 20.44999999999999
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "6919",
+      "stock_name": "康霈*",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 104.0,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 5004429,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 0.4015121010569942,
+              "signal": 0.8036430886511177,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                0.5280645594086799,
+                -0.06265634561020483,
+                -0.40213098759412347
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 5004429,
+          "distance_to_band_midpoint": 45.94999999999999
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "9921",
+      "stock_name": "巨大",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 101.0,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 4201221,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 5.770185141578025,
+              "signal": 4.386312673767841,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                2.828418810828209,
+                2.2992565764147104,
+                1.3838724678101846
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 4201221,
+          "distance_to_band_midpoint": 48.94999999999999
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "3005",
+      "stock_name": "神基",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 116.5,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 3758263,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 1.069680678291391,
+              "signal": 1.0772713982129425,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                -0.10419006174902856,
+                -0.1506366825074954,
+                -0.00759071992155147
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 3758263,
+          "distance_to_band_midpoint": 33.44999999999999
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
       "stock_id": "6206",
       "stock_name": "飛捷",
       "market_type": "twse",
       "fixed_pool": {
         "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
         "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
+        "anchor_date": "2026-08-14",
         "gates": {
           "F1_PRICE_BAND": {
             "passed": true,
             "raw": {
-              "close": 144.0,
+              "close": 143.0,
               "matched_band": {
                 "minimum": 100.0,
                 "maximum": 199.9,
@@ -991,7 +1411,7 @@
           "F2_LIQUIDITY": {
             "passed": true,
             "raw": {
-              "average_volume_20d_shares": 2818170,
+              "average_volume_20d_shares": 3758179,
               "minimum_shares": 800000,
               "completed_bars": 20
             }
@@ -1000,7 +1420,7 @@
             "passed": true,
             "raw": {
               "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
+              "date": "2026-08-14",
               "BuyAfterSale": "",
               "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
             }
@@ -1009,148 +1429,8 @@
             "passed": true,
             "raw": {
               "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 4.632943858383356,
-              "signal": 1.7331352183858018,
-              "above_zero_now": true,
-              "crossed_this_week": true
-            }
-          },
-          "F5_MOMENTUM_B": {
-            "passed": false,
-            "raw": {
-              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
-              "histogram_sequence": [
-                3.1161156135729016,
-                3.1853990958161607,
-                2.8998086399975547
-              ]
-            }
-          }
-        },
-        "passed": true,
-        "reject_reason": [],
-        "ranking": {
-          "momentum_a_priority": 1,
-          "average_volume_20d_shares": 2818170,
-          "distance_to_band_midpoint": 5.949999999999989
-        }
-      }
-    },
-    {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "6538",
-      "stock_name": "倉和",
-      "market_type": "tpex",
-      "fixed_pool": {
-        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
-        "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
-        "gates": {
-          "F1_PRICE_BAND": {
-            "passed": true,
-            "raw": {
-              "close": 145.0,
-              "matched_band": {
-                "minimum": 100.0,
-                "maximum": 199.9,
-                "avg_volume_20d_min_shares": 800000
-              }
-            }
-          },
-          "F2_LIQUIDITY": {
-            "passed": true,
-            "raw": {
-              "average_volume_20d_shares": 2245055,
-              "minimum_shares": 800000,
-              "completed_bars": 20
-            }
-          },
-          "F3_OFFICIAL_STATUS": {
-            "passed": true,
-            "raw": {
-              "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
-              "BuyAfterSale": "",
-              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-            }
-          },
-          "F4_MOMENTUM_A": {
-            "passed": true,
-            "raw": {
-              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 3.727094846888974,
-              "signal": 1.8868698693851294,
-              "above_zero_now": true,
-              "crossed_this_week": true
-            }
-          },
-          "F5_MOMENTUM_B": {
-            "passed": false,
-            "raw": {
-              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
-              "histogram_sequence": [
-                2.3909353864571523,
-                2.4702603212340994,
-                1.8402249775038448
-              ]
-            }
-          }
-        },
-        "passed": true,
-        "reject_reason": [],
-        "ranking": {
-          "momentum_a_priority": 1,
-          "average_volume_20d_shares": 2245055,
-          "distance_to_band_midpoint": 4.949999999999989
-        }
-      }
-    },
-    {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "6214",
-      "stock_name": "精誠",
-      "market_type": "twse",
-      "fixed_pool": {
-        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
-        "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
-        "gates": {
-          "F1_PRICE_BAND": {
-            "passed": true,
-            "raw": {
-              "close": 146.5,
-              "matched_band": {
-                "minimum": 100.0,
-                "maximum": 199.9,
-                "avg_volume_20d_min_shares": 800000
-              }
-            }
-          },
-          "F2_LIQUIDITY": {
-            "passed": true,
-            "raw": {
-              "average_volume_20d_shares": 2218079,
-              "minimum_shares": 800000,
-              "completed_bars": 20
-            }
-          },
-          "F3_OFFICIAL_STATUS": {
-            "passed": true,
-            "raw": {
-              "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
-              "BuyAfterSale": "",
-              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-            }
-          },
-          "F4_MOMENTUM_A": {
-            "passed": true,
-            "raw": {
-              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 2.2573358360432962,
-              "signal": 2.3587846476576932,
+              "dif": 5.332867013672654,
+              "signal": 4.476466786534181,
               "above_zero_now": true,
               "crossed_this_week": false
             }
@@ -1160,9 +1440,9 @@
             "raw": {
               "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
               "histogram_sequence": [
-                1.0142672038154057,
-                0.28386285193845273,
-                -0.101448811614397
+                1.793920570173226,
+                2.1288242173622036,
+                0.8564002271384732
               ]
             }
           }
@@ -1171,376 +1451,26 @@
         "reject_reason": [],
         "ranking": {
           "momentum_a_priority": 1,
-          "average_volume_20d_shares": 2218079,
-          "distance_to_band_midpoint": 3.4499999999999886
+          "average_volume_20d_shares": 3758179,
+          "distance_to_band_midpoint": 6.949999999999989
         }
       }
     },
     {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "9939",
-      "stock_name": "宏全",
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "1909",
+      "stock_name": "榮成",
       "market_type": "twse",
       "fixed_pool": {
         "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
         "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
+        "anchor_date": "2026-08-14",
         "gates": {
           "F1_PRICE_BAND": {
             "passed": true,
             "raw": {
-              "close": 144.5,
-              "matched_band": {
-                "minimum": 100.0,
-                "maximum": 199.9,
-                "avg_volume_20d_min_shares": 800000
-              }
-            }
-          },
-          "F2_LIQUIDITY": {
-            "passed": true,
-            "raw": {
-              "average_volume_20d_shares": 1981497,
-              "minimum_shares": 800000,
-              "completed_bars": 20
-            }
-          },
-          "F3_OFFICIAL_STATUS": {
-            "passed": true,
-            "raw": {
-              "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
-              "BuyAfterSale": "",
-              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-            }
-          },
-          "F4_MOMENTUM_A": {
-            "passed": true,
-            "raw": {
-              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 3.4255010742496097,
-              "signal": 1.5737683476619586,
-              "above_zero_now": true,
-              "crossed_this_week": false
-            }
-          },
-          "F5_MOMENTUM_B": {
-            "passed": false,
-            "raw": {
-              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
-              "histogram_sequence": [
-                0.4040121157271478,
-                1.304256962280197,
-                1.851732726587651
-              ]
-            }
-          }
-        },
-        "passed": true,
-        "reject_reason": [],
-        "ranking": {
-          "momentum_a_priority": 1,
-          "average_volume_20d_shares": 1981497,
-          "distance_to_band_midpoint": 5.449999999999989
-        }
-      }
-    },
-    {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "3029",
-      "stock_name": "零壹",
-      "market_type": "twse",
-      "fixed_pool": {
-        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
-        "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
-        "gates": {
-          "F1_PRICE_BAND": {
-            "passed": true,
-            "raw": {
-              "close": 109.5,
-              "matched_band": {
-                "minimum": 100.0,
-                "maximum": 199.9,
-                "avg_volume_20d_min_shares": 800000
-              }
-            }
-          },
-          "F2_LIQUIDITY": {
-            "passed": true,
-            "raw": {
-              "average_volume_20d_shares": 1417098,
-              "minimum_shares": 800000,
-              "completed_bars": 20
-            }
-          },
-          "F3_OFFICIAL_STATUS": {
-            "passed": true,
-            "raw": {
-              "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
-              "BuyAfterSale": "",
-              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-            }
-          },
-          "F4_MOMENTUM_A": {
-            "passed": true,
-            "raw": {
-              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 1.5950490083545361,
-              "signal": 0.8724573517255714,
-              "above_zero_now": true,
-              "crossed_this_week": false
-            }
-          },
-          "F5_MOMENTUM_B": {
-            "passed": false,
-            "raw": {
-              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
-              "histogram_sequence": [
-                0.4051049071166404,
-                0.68276442219699,
-                0.7225916566289647
-              ]
-            }
-          }
-        },
-        "passed": true,
-        "reject_reason": [],
-        "ranking": {
-          "momentum_a_priority": 1,
-          "average_volume_20d_shares": 1417098,
-          "distance_to_band_midpoint": 40.44999999999999
-        }
-      }
-    },
-    {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "6579",
-      "stock_name": "研揚",
-      "market_type": "twse",
-      "fixed_pool": {
-        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
-        "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
-        "gates": {
-          "F1_PRICE_BAND": {
-            "passed": true,
-            "raw": {
-              "close": 171.5,
-              "matched_band": {
-                "minimum": 100.0,
-                "maximum": 199.9,
-                "avg_volume_20d_min_shares": 800000
-              }
-            }
-          },
-          "F2_LIQUIDITY": {
-            "passed": true,
-            "raw": {
-              "average_volume_20d_shares": 1205423,
-              "minimum_shares": 800000,
-              "completed_bars": 20
-            }
-          },
-          "F3_OFFICIAL_STATUS": {
-            "passed": true,
-            "raw": {
-              "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
-              "BuyAfterSale": "",
-              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-            }
-          },
-          "F4_MOMENTUM_A": {
-            "passed": true,
-            "raw": {
-              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 2.3492136192417377,
-              "signal": 0.8403346979853241,
-              "above_zero_now": true,
-              "crossed_this_week": true
-            }
-          },
-          "F5_MOMENTUM_B": {
-            "passed": false,
-            "raw": {
-              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
-              "histogram_sequence": [
-                1.1690390426315023,
-                1.6823248798652164,
-                1.5088789212564135
-              ]
-            }
-          }
-        },
-        "passed": true,
-        "reject_reason": [],
-        "ranking": {
-          "momentum_a_priority": 1,
-          "average_volume_20d_shares": 1205423,
-          "distance_to_band_midpoint": 21.55000000000001
-        }
-      }
-    },
-    {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "6416",
-      "stock_name": "瑞祺電通",
-      "market_type": "twse",
-      "fixed_pool": {
-        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
-        "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
-        "gates": {
-          "F1_PRICE_BAND": {
-            "passed": true,
-            "raw": {
-              "close": 103.0,
-              "matched_band": {
-                "minimum": 100.0,
-                "maximum": 199.9,
-                "avg_volume_20d_min_shares": 800000
-              }
-            }
-          },
-          "F2_LIQUIDITY": {
-            "passed": true,
-            "raw": {
-              "average_volume_20d_shares": 1056395,
-              "minimum_shares": 800000,
-              "completed_bars": 20
-            }
-          },
-          "F3_OFFICIAL_STATUS": {
-            "passed": true,
-            "raw": {
-              "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
-              "BuyAfterSale": "",
-              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-            }
-          },
-          "F4_MOMENTUM_A": {
-            "passed": true,
-            "raw": {
-              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 1.6987203743225194,
-              "signal": 1.0738130136363384,
-              "above_zero_now": true,
-              "crossed_this_week": true
-            }
-          },
-          "F5_MOMENTUM_B": {
-            "passed": false,
-            "raw": {
-              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
-              "histogram_sequence": [
-                -0.5896826969091726,
-                0.21533430596975278,
-                0.624907360686181
-              ]
-            }
-          }
-        },
-        "passed": true,
-        "reject_reason": [],
-        "ranking": {
-          "momentum_a_priority": 1,
-          "average_volume_20d_shares": 1056395,
-          "distance_to_band_midpoint": 46.94999999999999
-        }
-      }
-    },
-    {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "1736",
-      "stock_name": "喬山",
-      "market_type": "twse",
-      "fixed_pool": {
-        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
-        "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
-        "gates": {
-          "F1_PRICE_BAND": {
-            "passed": true,
-            "raw": {
-              "close": 137.0,
-              "matched_band": {
-                "minimum": 100.0,
-                "maximum": 199.9,
-                "avg_volume_20d_min_shares": 800000
-              }
-            }
-          },
-          "F2_LIQUIDITY": {
-            "passed": true,
-            "raw": {
-              "average_volume_20d_shares": 886794,
-              "minimum_shares": 800000,
-              "completed_bars": 20
-            }
-          },
-          "F3_OFFICIAL_STATUS": {
-            "passed": true,
-            "raw": {
-              "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
-              "BuyAfterSale": "",
-              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-            }
-          },
-          "F4_MOMENTUM_A": {
-            "passed": true,
-            "raw": {
-              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": 1.565688399940825,
-              "signal": 0.8515287951120951,
-              "above_zero_now": true,
-              "crossed_this_week": true
-            }
-          },
-          "F5_MOMENTUM_B": {
-            "passed": false,
-            "raw": {
-              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
-              "histogram_sequence": [
-                -0.7793470173888412,
-                0.5336322469996182,
-                0.71415960482873
-              ]
-            }
-          }
-        },
-        "passed": true,
-        "reject_reason": [],
-        "ranking": {
-          "momentum_a_priority": 1,
-          "average_volume_20d_shares": 886794,
-          "distance_to_band_midpoint": 12.949999999999989
-        }
-      }
-    },
-    {
-      "run_id": "1ba90ede-af0a-43e6-a8c2-38fbe311a6fa",
-      "built_at": "2026-08-13T23:23:19.403183+08:00",
-      "stock_id": "2836",
-      "stock_name": "高雄銀",
-      "market_type": "twse",
-      "fixed_pool": {
-        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
-        "parameter_status": "research_default",
-        "anchor_date": "2026-08-07",
-        "gates": {
-          "F1_PRICE_BAND": {
-            "passed": true,
-            "raw": {
-              "close": 11.850000381469727,
+              "close": 10.600000381469727,
               "matched_band": {
                 "minimum": 10.0,
                 "maximum": 24.9,
@@ -1551,7 +1481,7 @@
           "F2_LIQUIDITY": {
             "passed": true,
             "raw": {
-              "average_volume_20d_shares": 5620359,
+              "average_volume_20d_shares": 3245297,
               "minimum_shares": 3000000,
               "completed_bars": 20
             }
@@ -1560,7 +1490,1057 @@
             "passed": true,
             "raw": {
               "source": "FinMind/TaiwanStockDayTrading",
-              "date": "2026-08-07",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 0.06819966168546188,
+              "signal": 0.010398648729638114,
+              "above_zero_now": true,
+              "crossed_this_week": true
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                0.012695464713990853,
+                0.01681334570662338,
+                0.057801012955823766
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 3245297,
+          "distance_to_band_midpoint": 6.849999618530273
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "2421",
+      "stock_name": "建準",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 146.0,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 2667935,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 3.9062329030919045,
+              "signal": 2.7067310896597543,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                2.750359206303631,
+                2.092505942520884,
+                1.1995018134321502
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 2667935,
+          "distance_to_band_midpoint": 3.9499999999999886
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "6538",
+      "stock_name": "倉和",
+      "market_type": "tpex",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 184.0,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 2468964,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 10.13525882040642,
+              "signal": 5.186152055014944,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                2.048786804903844,
+                3.793468938240519,
+                4.949106765391477
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 2468964,
+          "distance_to_band_midpoint": 34.05000000000001
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "4973",
+      "stock_name": "廣穎",
+      "market_type": "tpex",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 159.5,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 2220615,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 4.133376807879586,
+              "signal": 1.0255957250696242,
+              "above_zero_now": true,
+              "crossed_this_week": true
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                4.0380715767780595,
+                3.8744439184081507,
+                3.1077810828099617
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 2220615,
+          "distance_to_band_midpoint": 9.550000000000011
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "6214",
+      "stock_name": "精誠",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 172.0,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 2187788,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 4.307312409867137,
+              "signal": 2.2511470849088946,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                -1.1180295895518662,
+                0.0641026419091082,
+                2.0561653249582426
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 2187788,
+          "distance_to_band_midpoint": 22.05000000000001
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "3135",
+      "stock_name": "凌航",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 164.0,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 2167643,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 1.675685318598255,
+              "signal": 0.8160012392256139,
+              "above_zero_now": true,
+              "crossed_this_week": true
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                1.8687565024480501,
+                1.5966143463915041,
+                0.8596840793726411
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 2167643,
+          "distance_to_band_midpoint": 14.050000000000011
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "9939",
+      "stock_name": "宏全",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 132.0,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 2130867,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 1.4994581030988456,
+              "signal": 2.1815614352192463,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                0.2570064055298289,
+                -0.15413710826190385,
+                -0.6821033321204006
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 2130867,
+          "distance_to_band_midpoint": 17.94999999999999
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "2476",
+      "stock_name": "鉅祥",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 120.0,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 1985999,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "Y",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 0.9041953556752986,
+              "signal": 0.3780885119213864,
+              "above_zero_now": true,
+              "crossed_this_week": true
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                1.8287287374183028,
+                1.2293305424662666,
+                0.5261068437539123
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 1985999,
+          "distance_to_band_midpoint": 29.94999999999999
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "5443",
+      "stock_name": "均豪",
+      "market_type": "tpex",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 106.0,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 1933560,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 2.8189366282696113,
+              "signal": 0.13384090745154087,
+              "above_zero_now": true,
+              "crossed_this_week": true
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                3.7886346888682088,
+                3.301708847409016,
+                2.6850957208180706
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 1933560,
+          "distance_to_band_midpoint": 43.94999999999999
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "3498",
+      "stock_name": "陽程",
+      "market_type": "tpex",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 158.0,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 1878302,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 9.593769350784058,
+              "signal": 2.5479969193759677,
+              "above_zero_now": true,
+              "crossed_this_week": true
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                4.713650855096353,
+                5.724308820057131,
+                7.04577243140809
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 1878302,
+          "distance_to_band_midpoint": 8.050000000000011
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "1597",
+      "stock_name": "直得",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 143.5,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 1643180,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 4.79846887028134,
+              "signal": 2.1117388298243087,
+              "above_zero_now": true,
+              "crossed_this_week": true
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                4.362652237888894,
+                3.8773158023991403,
+                2.6867300404570313
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 1643180,
+          "distance_to_band_midpoint": 6.449999999999989
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "3029",
+      "stock_name": "零壹",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 111.5,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 1468433,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 1.8692561340199632,
+              "signal": 1.420030111406141,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                0.27958979128523853,
+                0.4278967135109317,
+                0.44922602261382205
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 1468433,
+          "distance_to_band_midpoint": 38.44999999999999
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "1736",
+      "stock_name": "喬山",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 136.0,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 1130902,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 2.2853920312251716,
+              "signal": 2.024132625328431,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                1.0941952739064662,
+                0.8868797700235871,
+                0.26125940589674057
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 1130902,
+          "distance_to_band_midpoint": 13.949999999999989
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "3010",
+      "stock_name": "華立",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 127.5,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 993675,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 3.115699406517436,
+              "signal": 1.2025776335586205,
+              "above_zero_now": true,
+              "crossed_this_week": true
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                2.404882280894248,
+                2.4250039035087005,
+                1.9131217729588155
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 993675,
+          "distance_to_band_midpoint": 22.44999999999999
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "6279",
+      "stock_name": "胡連",
+      "market_type": "tpex",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 127.5,
+              "matched_band": {
+                "minimum": 100.0,
+                "maximum": 199.9,
+                "avg_volume_20d_min_shares": 800000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 853630,
+              "minimum_shares": 800000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
+              "BuyAfterSale": "",
+              "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+            }
+          },
+          "F4_MOMENTUM_A": {
+            "passed": true,
+            "raw": {
+              "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
+              "dif": 3.249221802356473,
+              "signal": 1.9964067395269052,
+              "above_zero_now": true,
+              "crossed_this_week": false
+            }
+          },
+          "F5_MOMENTUM_B": {
+            "passed": false,
+            "raw": {
+              "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
+              "histogram_sequence": [
+                2.1481802937431707,
+                1.8020941443540353,
+                1.252815062829568
+              ]
+            }
+          }
+        },
+        "passed": true,
+        "reject_reason": [],
+        "ranking": {
+          "momentum_a_priority": 1,
+          "average_volume_20d_shares": 853630,
+          "distance_to_band_midpoint": 22.44999999999999
+        }
+      }
+    },
+    {
+      "run_id": "a2422674-1d0d-4eb1-b08a-c00dd1999e31",
+      "built_at": "2026-08-14T18:31:06.920085+08:00",
+      "stock_id": "5880",
+      "stock_name": "合庫金",
+      "market_type": "twse",
+      "fixed_pool": {
+        "strategy_version": "A5-N-fixed-pool-research-v0.1-20260813",
+        "parameter_status": "research_default",
+        "anchor_date": "2026-08-14",
+        "gates": {
+          "F1_PRICE_BAND": {
+            "passed": true,
+            "raw": {
+              "close": 24.200000762939453,
+              "matched_band": {
+                "minimum": 10.0,
+                "maximum": 24.9,
+                "avg_volume_20d_min_shares": 3000000
+              }
+            }
+          },
+          "F2_LIQUIDITY": {
+            "passed": true,
+            "raw": {
+              "average_volume_20d_shares": 28065279,
+              "minimum_shares": 3000000,
+              "completed_bars": 20
+            }
+          },
+          "F3_OFFICIAL_STATUS": {
+            "passed": true,
+            "raw": {
+              "source": "FinMind/TaiwanStockDayTrading",
+              "date": "2026-08-14",
               "BuyAfterSale": "",
               "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
             }
@@ -1569,8 +2549,8 @@
             "passed": false,
             "raw": {
               "definition": "DIF_and_signal_both_above_zero_or_crossed_this_week",
-              "dif": -0.17809821899648348,
-              "signal": -0.08779314067889121,
+              "dif": -0.26681553236126376,
+              "signal": 0.024706483306685387,
               "above_zero_now": false,
               "crossed_this_week": false
             }
@@ -1580,9 +2560,9 @@
             "raw": {
               "definition": "negative_histogram_strictly_contracts_from_recent_5bar_low",
               "histogram_sequence": [
-                -0.12089535830843054,
-                -0.11069774968953651,
-                -0.09030507831759227
+                -0.3179243359834565,
+                -0.31627646259735565,
+                -0.29152201566794916
               ]
             }
           }
@@ -1591,8 +2571,8 @@
         "reject_reason": [],
         "ranking": {
           "momentum_a_priority": 0,
-          "average_volume_20d_shares": 5620359,
-          "distance_to_band_midpoint": 5.599999618530273
+          "average_volume_20d_shares": 28065279,
+          "distance_to_band_midpoint": 6.750000762939454
         }
       }
     }
