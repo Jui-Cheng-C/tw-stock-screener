@@ -55,8 +55,19 @@ class A5NLookaheadTests(unittest.TestCase):
 
     def test_empty_scan_still_builds_ntfy(self):
         source = Path("tw_stock_screener.py").read_text(encoding="utf-8")
-        self.assertIn("本次A5-N無正式合格標的", source)
-        self.assertIn("新策略測試訊號，僅供人工核對，非自動下單。", source)
+        self.assertIn("本次沒有符合進場條件的股票", source)
+        self.assertIn("僅供人工核對，非自動下單", source)
+
+    def test_a5n_ntfy_uses_traditional_chinese_labels(self):
+        from tw_stock_screener import a5n_gate_summary, a5n_reason_summary
+        row = {
+            "A": {"A1": {"passed": True}, "A2": {"passed": False}},
+            "B": {"B1": {"passed": True}},
+            "C": {},
+            "reject_reason": ["C1_NO_BREAKOUT", "C5"],
+        }
+        self.assertEqual(a5n_gate_summary(row), "日K 1/5｜60分K 1/5｜5分K 0/5")
+        self.assertEqual(a5n_reason_summary(row), "尚未突破、時效、風險或報酬比複驗未過")
 
     def test_notification_is_capped_at_four_and_excess_is_retained(self):
         from tw_stock_screener import format_a5n_ntfy_message

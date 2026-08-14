@@ -4878,12 +4878,48 @@ def format_intraday_ntfy_message(results: dict[str, list[dict[str, Any]]], marke
 
 
 def a5n_gate_summary(item: dict[str, Any]) -> str:
+    labels = {"A": "日K", "B": "60分K", "C": "5分K"}
     parts = []
     for layer in ("A", "B", "C"):
         gates = item.get(layer, {})
         passed = sum(int(v.get("passed", False)) for v in gates.values())
-        parts.append(f"{layer}{passed}/{len(gates)}")
-    return " ".join(parts)
+        parts.append(f"{labels[layer]} {passed}/5")
+    return "｜".join(parts)
+
+
+A5N_STATE_ZH = {
+    "DAILY_CANDIDATE": "日K候選",
+    "HOURLY_CONFIRMED": "60分K確認",
+    "BREAKOUT_DETECTED": "已突破，等待回測",
+    "WAITING_PULLBACK": "等待首次回測",
+    "ENTRY_VALIDATED": "進場條件成立",
+    "EXPIRED": "訊號失效",
+    "REJECTED": "條件未通過",
+}
+
+A5N_REASON_ZH = {
+    "A1": "日K平台條件",
+    "A2": "日K均線結構",
+    "A5": "流動性或當沖資格",
+    "B1": "60分K低點結構",
+    "B2": "60分K均線結構",
+    "B3_OR_B4": "60分K動能",
+    "B_DATA_INSUFFICIENT": "60分K資料不足",
+    "C_DATA_INSUFFICIENT": "5分K資料不足",
+    "C_NOT_ENOUGH_COMPLETED_5K": "已完成5分K不足",
+    "C1_NO_BREAKOUT": "尚未突破",
+    "C2_WAITING_FIRST_PULLBACK": "等待首次回測",
+    "C2": "回測未守穩",
+    "C3": "短均線未轉強",
+    "C4": "量價或MACD未確認",
+    "C5": "時效、風險或報酬比複驗未過",
+}
+
+
+def a5n_reason_summary(item: dict[str, Any]) -> str:
+    reasons = item.get("reject_reason") or []
+    translated = [A5N_REASON_ZH.get(str(reason), "其他條件未通過") for reason in reasons]
+    return "、".join(dict.fromkeys(translated)) if translated else "尚未觸發"
 
 
 def format_a5n_ntfy_message(rows: list[dict[str, Any]]) -> str:
@@ -4903,29 +4939,22 @@ def format_a5n_ntfy_message(rows: list[dict[str, Any]]) -> str:
         x["notification_rank"] = rank
         x["notification_selected"] = id(x) in selected_ids
         x["notification_suppressed_reason"] = None if id(x) in selected_ids else "ENTRY_VALIDATED_OVER_SCAN_LIMIT"
-    lines = ["🧪 A5-N 新策略即時測試"]
+    lines = ["📈 A5-N 第五類當沖測試"]
     if validated:
         for x in validated[:max_entries]:
-            a1=(x.get("A",{}).get("A1",{}).get("raw",{})); a2=(x.get("A",{}).get("A2",{}).get("raw",{})); a4=(x.get("A",{}).get("A4",{}).get("raw",{}))
-            b1=(x.get("B",{}).get("B1",{}).get("raw",{})); b2=(x.get("B",{}).get("B2",{}).get("raw",{})); b4=(x.get("B",{}).get("B4",{}).get("raw",{}))
-            c3=(x.get("C",{}).get("C3",{}).get("raw",{})); c4=(x.get("C",{}).get("C4",{}).get("raw",{}))
-            lines += [
-                f"{x.get('stock_id')}／{x.get('stock_name')}", "目前狀態：ENTRY_VALIDATED",
-                f"日K：平台 {a1.get('platform_low')}–{a1.get('platform_high')}；距上緣 {a1.get('distance_to_high_pct')}%；MA20 {a2.get('ma20')}（前值 {a2.get('ma20_prior')}）；MACD {a4.get('reason')}",
-                f"60K：最後完成 {x.get('last_completed_60k_timestamp')}；低點 {b1.get('first_low')}→{b1.get('last_low')}；MA20/60 {b2.get('ma20')}/{b2.get('ma60')}；MACD柱 {b4.get('histogram')}；突破價 {x.get('breakout_level')}",
-                f"5K：突破 {x.get('breakout_timestamp')} @ {x.get('breakout_level')}；回測低 {x.get('pullback_low')}；訊號 {x.get('signal_price')}；複驗 {x.get('recheck_price')} @ {x.get('recheck_timestamp')}",
-                f"EMA5 {c3.get('ema5')}；MACD {c4.get('macd_reason')}；相對量 {c4.get('relative_volume')}；回測量/突破量 {c4.get('pullback_volume_ratio')}；防守 {x.get('structural_stop')}（{x.get('stop_risk_pct')}%）；年齡 {x.get('signal_age_seconds')}秒",
-            ]
+            lines.append(
+                f"符合進場｜{x.get('stock_id')} {x.get('stock_name')}｜"
+                f"參考價 {x.get('signal_price')}｜防守 {x.get('structural_stop')}｜{a5n_gate_summary(x)}"
+            )
         if len(validated) > max_entries:
             lines.append(f"另有 {len(validated)-max_entries} 檔合格但超過每次{max_entries}檔上限，已保留於Ledger。")
     else:
-        lines.append("本次A5-N無正式合格標的")
+        lines.append("本次沒有符合進場條件的股票")
         ranked = sorted(effective_rows, key=a5n_rank_key, reverse=True)[:5]
         for x in ranked:
-            reasons = ",".join(x.get("reject_reason") or ["資料不足/尚未觸發"])
-            lines.append(f"接近者｜{x.get('stock_id')} {x.get('stock_name')}｜{x.get('strategy_state')}｜{a5n_gate_summary(x)}｜未過：{reasons}")
-    lines.append(f"參數：{A5_N_CONFIG.get('parameter_status')}｜{A5_N_VERSION}｜每次上限{max_entries}檔")
-    lines.append("新策略測試訊號，僅供人工核對，非自動下單。")
+            state = A5N_STATE_ZH.get(str(x.get("strategy_state")), "觀察中")
+            lines.append(f"接近｜{x.get('stock_id')} {x.get('stock_name')}｜{state}｜{a5n_gate_summary(x)}｜原因：{a5n_reason_summary(x)}")
+    lines.append(f"每次最多通知 {max_entries} 檔｜僅供人工核對，非自動下單")
     return "\n".join(lines)
 
 
