@@ -119,7 +119,6 @@ SWING_STOP_BASELINE_WARNING_TEXT = "超過個人波段3–4% Baseline，需人�
 SWING_STOP_BASELINE_WARNING_CODE = "SWING_STOP_RISK_GT_PERSONAL_BASELINE_REVIEW_REQUIRED"
 A3_OBSERVATION_CATEGORY = "60K起漲雷達【觀察／準備型，非正式進場確認】"
 A5_SIGNAL_PRICE_RULE = "completed_5k_signal_bar_close"
-A5_LEGACY_ENABLED = False
 A5_N_LEDGER_PATH = LEDGER_DIR / "a5n_signal_ledger.jsonl"
 A5_N_POOL_PATH = LEDGER_DIR / "a5n_daily_candidate_pool.json"
 A5_N_PREMARKET_LEDGER_PATH = LEDGER_DIR / "a5n_premarket_ledger.jsonl"
@@ -131,7 +130,48 @@ A5_N_FIXED_POOL_LEDGER_PATH = LEDGER_DIR / "a5n_weekly_fixed_pool_ledger.jsonl"
 A5_N_FIXED_SHADOW_POOL_PATH = LEDGER_DIR / "a5n_weekly_fixed_pool_momentum_rank_shadow.json"
 A5_N_FIXED_SHADOW_POOL_LEDGER_PATH = LEDGER_DIR / "a5n_weekly_fixed_pool_momentum_rank_shadow_ledger.jsonl"
 A5_N_FIXED_SHADOW_SIGNAL_LEDGER_PATH = LEDGER_DIR / "a5n_fixed_pool_momentum_rank_shadow_signal_ledger.jsonl"
+A5_N_NOTIFICATION_SLOT_PATH = LEDGER_DIR / "a5n_notification_slots.json"
 A5_N_RUN_ROWS: list[dict[str, Any]] = []
+
+
+def a5n_notification_slot(now: dt.datetime | None = None) -> str:
+    configured = os.getenv("A5N_NOTIFICATION_SLOT", "").strip()
+    if configured in {"09:16", "09:26", "09:31"}:
+        return configured
+    current = now or now_taipei()
+    minute_of_day = current.hour * 60 + current.minute
+    if minute_of_day <= 9 * 60 + 21:
+        return "09:16"
+    if minute_of_day <= 9 * 60 + 30:
+        return "09:26"
+    return "09:31"
+
+
+def a5n_slot_already_sent(slot: str, now: dt.datetime | None = None) -> bool:
+    current = now or now_taipei()
+    if not A5_N_NOTIFICATION_SLOT_PATH.exists():
+        return False
+    try:
+        payload = json.loads(A5_N_NOTIFICATION_SLOT_PATH.read_text(encoding="utf-8"))
+        return bool(payload.get(str(current.date()), {}).get(slot))
+    except (json.JSONDecodeError, OSError):
+        return False
+
+
+def mark_a5n_slot_sent(slot: str, now: dt.datetime | None = None) -> None:
+    current = now or now_taipei()
+    payload: dict[str, Any] = {}
+    if A5_N_NOTIFICATION_SLOT_PATH.exists():
+        try:
+            payload = json.loads(A5_N_NOTIFICATION_SLOT_PATH.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            payload = {}
+    payload = {day: slots for day, slots in payload.items()
+               if pd.Timestamp(day).date() >= current.date() - dt.timedelta(days=14)}
+    payload.setdefault(str(current.date()), {})[slot] = current.isoformat()
+    LEDGER_DIR.mkdir(parents=True, exist_ok=True)
+    A5_N_NOTIFICATION_SLOT_PATH.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def get_technical_params(timeframe: str) -> dict[str, Any]:
@@ -3645,34 +3685,17 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
                 prepare_turn_ok, prepare_turn_reason, prepare_turn_priority, prepare_turn_info = (
                     intraday_prepare_turn_signal(intraday)
                 )
-                if A5_LEGACY_ENABLED:
-                    (
-                        extreme_daytrade_ok,
-                        extreme_daytrade_reason,
-                        extreme_daytrade_priority,
-                        extreme_daytrade_info,
-                    ) = intraday_extreme_daytrade_signal_legacy(intraday)
                 daytrade_direction_ok, daytrade_direction_info = intraday_60k_daytrade_direction_ok(
                     intraday
                 )
                 five_min = get_yahoo_5m_intraday(stock_id, market_type, cfg)
-                if A5_LEGACY_ENABLED:
-                    five_k_ok, five_k_reason, five_k_priority, five_k_info = intraday_5k_daytrade_signal_legacy(
-                        five_min
-                    )
                 intraday_volume_ok = (
                     int(five_k_info.get("intraday_volume_shares") or 0)
                     >= cfg.daytrade_min_volume_shares
                 )
-                if A5_LEGACY_ENABLED:
-                    extreme_daytrade_ok = bool(
-                        daytrade_ok and daily_daytrade_ok and daytrade_direction_ok
-                        and five_k_ok and intraday_volume_ok
-                    )
-                else:
-                    a5n_row = row.copy()
-                    a5n_row["last_close"] = stop["last_close"]
-                    extreme_daytrade_info = evaluate_a5n(
+                a5n_row = row.copy()
+                a5n_row["last_close"] = stop["last_close"]
+                extreme_daytrade_info = evaluate_a5n(
                         row=a5n_row, daily=daily, hourly=intraday, five_min=five_min,
                         as_of=dt.datetime.now(TAIPEI_TZ), add_indicators=add_indicators,
                         keep_completed_5m=keep_completed_5m_bars,
@@ -3682,28 +3705,28 @@ def screen_stock(row: pd.Series, cfg: Config) -> dict[str, dict[str, Any]]:
                         min_turnover=cfg.daytrade_min_turnover,
                         daily_prequalified=(row.get("a5n_fixed_qualification")
                             if row.get("a5n_candidate_source") == "A5_N_FIXED_POOL" else None),
-                    )
-                    extreme_daytrade_info.update({
+                )
+                extreme_daytrade_info.update({
                         "stock_id": str(stock_id), "stock_name": str(stock_name),
                         "market_type": str(market_type),
-                    })
-                    A5_N_RUN_ROWS.append(extreme_daytrade_info)
-                    extreme_daytrade_ok = extreme_daytrade_info.get("strategy_state") == "ENTRY_VALIDATED"
-                    daily_daytrade_ok = bool(
+                })
+                A5_N_RUN_ROWS.append(extreme_daytrade_info)
+                extreme_daytrade_ok = extreme_daytrade_info.get("strategy_state") == "ENTRY_VALIDATED"
+                daily_daytrade_ok = bool(
                         extreme_daytrade_info.get("candidate_source") == "A5_N_FIXED_POOL"
                         or all(extreme_daytrade_info.get("A", {}).get(k, {}).get("passed", False)
                                for k in ("A1", "A2", "A5")))
-                    b = extreme_daytrade_info.get("B", {})
-                    daytrade_direction_ok = bool(
+                b = extreme_daytrade_info.get("B", {})
+                daytrade_direction_ok = bool(
                         b.get("B1", {}).get("passed") and b.get("B2", {}).get("passed")
                         and (b.get("B3", {}).get("passed") or b.get("B4", {}).get("passed"))
                     )
-                    five_k_ok = extreme_daytrade_ok
-                    intraday_volume_ok = bool(
+                five_k_ok = extreme_daytrade_ok
+                intraday_volume_ok = bool(
                         extreme_daytrade_info.get("A", {}).get("A5", {}).get("passed", False)
                     )
-                    extreme_daytrade_reason = "平台突破後首次回測驗證"
-                    extreme_daytrade_priority = sum(
+                extreme_daytrade_reason = "平台突破後首次回測驗證"
+                extreme_daytrade_priority = sum(
                         int(v.get("passed", False))
                         for layer in ("A", "B", "C")
                         for v in extreme_daytrade_info.get(layer, {}).values()
@@ -5313,6 +5336,10 @@ def main() -> int:
         return 0
 
     if args.intraday_ntfy or args.a5n_test or args.a5n_scan_pool or args.a5n_scan_fixed_pool:
+        current_taipei = now_taipei()
+        if (args.a5n_scan_pool or args.a5n_scan_fixed_pool) and current_taipei.weekday() >= 5:
+            print("[A5-N skip] 週末不執行盤中掃描或發送通知。")
+            return 0
         market = market_state(cfg)
         if not market.get("ok") and not (args.a5n_test or args.a5n_scan_pool or args.a5n_scan_fixed_pool):
             reason = str(market.get("reason") or "大盤狀態未通過")
@@ -5352,9 +5379,17 @@ def main() -> int:
             )
         a5n_message = format_a5n_ntfy_message(A5_N_RUN_ROWS)
         sent_at = now_taipei().isoformat()
-        sent = False if args.no_notify else send_ntfy(
-            a5n_message, cfg, title="🧪 A5-N 新策略測試", priority="4"
-        )
+        slot = a5n_notification_slot(current_taipei)
+        duplicate_slot = ((args.a5n_scan_pool or args.a5n_scan_fixed_pool)
+                          and a5n_slot_already_sent(slot, current_taipei))
+        if duplicate_slot:
+            print(f"[A5-N duplicate suppressed] {current_taipei.date()} {slot} 已成功發送過。")
+            sent = False
+        else:
+            sent = False if args.no_notify else send_ntfy(
+                a5n_message, cfg, title="A5-N 第五類當沖測試", priority="4")
+            if sent and (args.a5n_scan_pool or args.a5n_scan_fixed_pool):
+                mark_a5n_slot_sent(slot, current_taipei)
         write_a5n_ledger(sent_at if sent else None)
         print(a5n_message)
         return 0

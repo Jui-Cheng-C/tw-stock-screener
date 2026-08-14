@@ -1,4 +1,5 @@
 import unittest
+import datetime as dt
 from email.header import Header
 from pathlib import Path
 
@@ -49,9 +50,11 @@ class A5NLookaheadTests(unittest.TestCase):
         got = _completed_60k(frame, pd.Timestamp("2026-08-13 10:42"))
         self.assertEqual(got["date"].max(), pd.Timestamp("2026-08-13 09:00"))
 
-    def test_legacy_is_disabled(self):
+    def test_legacy_has_no_executable_call_path(self):
         source = Path("tw_stock_screener.py").read_text(encoding="utf-8")
-        self.assertIn("A5_LEGACY_ENABLED = False", source)
+        self.assertNotIn("A5_LEGACY_ENABLED", source)
+        self.assertEqual(source.count("intraday_extreme_daytrade_signal_legacy("), 1)
+        self.assertEqual(source.count("intraday_5k_daytrade_signal_legacy("), 1)
 
     def test_empty_scan_still_builds_ntfy(self):
         source = Path("tw_stock_screener.py").read_text(encoding="utf-8")
@@ -68,6 +71,13 @@ class A5NLookaheadTests(unittest.TestCase):
         }
         self.assertEqual(a5n_gate_summary(row), "日K 1/5｜60分K 1/5｜5分K 0/5")
         self.assertEqual(a5n_reason_summary(row), "尚未突破、時效、風險或報酬比複驗未過")
+
+    def test_delayed_triggers_map_to_only_three_notification_slots(self):
+        from tw_stock_screener import a5n_notification_slot
+        self.assertEqual(a5n_notification_slot(dt.datetime(2026, 8, 14, 9, 16)), "09:16")
+        self.assertEqual(a5n_notification_slot(dt.datetime(2026, 8, 14, 9, 26)), "09:26")
+        self.assertEqual(a5n_notification_slot(dt.datetime(2026, 8, 14, 9, 31)), "09:31")
+        self.assertEqual(a5n_notification_slot(dt.datetime(2026, 8, 14, 9, 46)), "09:31")
 
     def test_notification_is_capped_at_four_and_excess_is_retained(self):
         from tw_stock_screener import format_a5n_ntfy_message
