@@ -1,7 +1,7 @@
 {
   "strategy_version": "A5-N-research-default-v0.1-20260813",
   "parameter_status": "research_default",
-  "built_at": "2026-08-14T11:10:34.458584+08:00",
+  "built_at": "2026-08-17T09:16:49.881910+08:00",
   "data_cutoff_rule": "strictly before scan date (T-1)",
   "config": {
     "parameter_status": "research_default",
@@ -33,8 +33,8 @@
     "min_reward_risk": 2.0
   },
   "mother_count": 2148,
-  "qualified_count": 23,
-  "kept_count": 23,
+  "qualified_count": 16,
+  "kept_count": 16,
   "evaluated_count": 2148,
   "missing_count": 0,
   "candidates": [
@@ -77,245 +77,9 @@
         "A1": {
           "passed": true,
           "raw": {
-            "platform_low": 80.5999984741211,
-            "platform_high": 86.0,
-            "distance_to_high_pct": -0.12,
-            "low_not_falling": true,
-            "platform_range_pct": 6.7,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 86.0999984741211,
-            "ma5": 85.33999938964844,
-            "ma10": 83.59000015258789,
-            "ma20": 82.89500007629394,
-            "ma20_prior": 82.42999992370605,
-            "cluster_pct": 2.84
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 3.87,
-            "recent_3d_gain_pct": 1.06,
-            "upper_shadow_pct": 0.35,
-            "pressure": 86.0
-          }
-        },
-        "A4": {
-          "passed": true,
-          "raw": {
-            "reason": "positive_hist_expanding",
-            "dif": 1.0237310760601446,
-            "histogram": 0.4824379696306398
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 86.0999984741211,
-            "max_price": 700.0,
-            "median_volume_20d": 963350,
-            "min_volume": 500000,
-            "average_turnover_20d": 86852303,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "9941",
-      "stock_name": "裕融",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
-            "platform_low": 31.850000381469727,
-            "platform_high": 36.29999923706055,
-            "distance_to_high_pct": 0.28,
-            "low_not_falling": true,
-            "platform_range_pct": 13.97,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 36.20000076293945,
-            "ma5": 35.69000091552734,
-            "ma10": 35.54500045776367,
-            "ma20": 34.90250015258789,
-            "ma20_prior": 34.86665859222412,
-            "cluster_pct": 2.18
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 3.72,
-            "recent_3d_gain_pct": 0.84,
-            "upper_shadow_pct": 0.28,
-            "pressure": 36.29999923706055
-          }
-        },
-        "A4": {
-          "passed": true,
-          "raw": {
-            "reason": "positive_hist_expanding",
-            "dif": 0.40680244483338157,
-            "histogram": 0.07515625281587557
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 36.20000076293945,
-            "max_price": 700.0,
-            "median_volume_20d": 53620572,
-            "min_volume": 500000,
-            "average_turnover_20d": 2130816057,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "2887",
-      "stock_name": "台新新光金",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
             "platform_low": 28.350000381469727,
             "platform_high": 31.75,
-            "distance_to_high_pct": 0.79,
+            "distance_to_high_pct": 0.31,
             "low_not_falling": true,
             "platform_range_pct": 11.99,
             "platform_days": 12
@@ -324,20 +88,20 @@
         "A2": {
           "passed": true,
           "raw": {
-            "close": 31.5,
-            "ma5": 31.129999923706055,
-            "ma10": 30.964999961853028,
-            "ma20": 30.46250009536743,
-            "ma20_prior": 30.285000038146972,
-            "cluster_pct": 2.12
+            "close": 31.649999618530273,
+            "ma5": 31.289999771118165,
+            "ma10": 31.044999885559083,
+            "ma20": 30.545000076293945,
+            "ma20_prior": 30.3625,
+            "cluster_pct": 2.35
           }
         },
         "A3": {
           "passed": true,
           "raw": {
-            "ma20_distance_pct": 3.41,
-            "recent_3d_gain_pct": 1.45,
-            "upper_shadow_pct": 0.0,
+            "ma20_distance_pct": 3.62,
+            "recent_3d_gain_pct": 1.93,
+            "upper_shadow_pct": 0.32,
             "pressure": 31.75
           }
         },
@@ -345,18 +109,18 @@
           "passed": true,
           "raw": {
             "reason": "positive_hist_expanding",
-            "dif": 0.3650853231115505,
-            "histogram": 0.06351880351749878
+            "dif": 0.3957455108862966,
+            "histogram": 0.07534319303379589
           }
         },
         "A5": {
           "passed": true,
           "raw": {
-            "price": 31.5,
+            "price": 31.649999618530273,
             "max_price": 700.0,
             "median_volume_20d": 43320422,
             "min_volume": 500000,
-            "average_turnover_20d": 1393743202,
+            "average_turnover_20d": 1407644321,
             "min_turnover": 50000000.0,
             "sparse_day_ratio": 0.0,
             "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
@@ -366,7 +130,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -376,1201 +140,21 @@
       "recheck_price": null,
       "signal_age_seconds": null,
       "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
+      "daily_data_date": "2026-08-14 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "BuyAfterSale": "",
         "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
       },
       "stock_id": "2883",
       "stock_name": "凱基金",
       "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
-            "platform_low": 82.0,
-            "platform_high": 88.80000305175781,
-            "distance_to_high_pct": 1.46,
-            "low_not_falling": true,
-            "platform_range_pct": 8.29,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 87.5,
-            "ma5": 86.81999969482422,
-            "ma10": 86.06999969482422,
-            "ma20": 84.97499961853028,
-            "ma20_prior": 83.97999954223633,
-            "cluster_pct": 2.11
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 2.97,
-            "recent_3d_gain_pct": 0.0,
-            "upper_shadow_pct": 0.79,
-            "pressure": 88.80000305175781
-          }
-        },
-        "A4": {
-          "passed": true,
-          "raw": {
-            "reason": "positive_hist_expanding",
-            "dif": 1.1325199488565971,
-            "histogram": 0.08041131874429563
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 87.5,
-            "max_price": 700.0,
-            "median_volume_20d": 8963474,
-            "min_volume": 500000,
-            "average_turnover_20d": 938780669,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "2615",
-      "stock_name": "萬海",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
-            "platform_low": 99.19999694824219,
-            "platform_high": 108.0,
-            "distance_to_high_pct": 1.85,
-            "low_not_falling": true,
-            "platform_range_pct": 8.87,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 106.0,
-            "ma5": 104.0,
-            "ma10": 104.35,
-            "ma20": 104.35,
-            "ma20_prior": 104.35,
-            "cluster_pct": 0.33
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 1.58,
-            "recent_3d_gain_pct": 2.91,
-            "upper_shadow_pct": 1.89,
-            "pressure": 108.0
-          }
-        },
-        "A4": {
-          "passed": true,
-          "raw": {
-            "reason": "positive_hist_expanding",
-            "dif": -0.2737202545813915,
-            "histogram": 0.5174867601956789
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 106.0,
-            "max_price": 700.0,
-            "median_volume_20d": 4169711,
-            "min_volume": 500000,
-            "average_turnover_20d": 451934791,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "2385",
-      "stock_name": "群光",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
-            "platform_low": 38.0,
-            "platform_high": 41.04999923706055,
-            "distance_to_high_pct": 2.68,
-            "low_not_falling": true,
-            "platform_range_pct": 8.03,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 39.95000076293945,
-            "ma5": 39.34000015258789,
-            "ma10": 39.51999969482422,
-            "ma20": 39.240342712402345,
-            "ma20_prior": 39.15323467254639,
-            "cluster_pct": 0.7
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 1.81,
-            "recent_3d_gain_pct": 2.7,
-            "upper_shadow_pct": 0.0,
-            "pressure": 41.04999923706055
-          }
-        },
-        "A4": {
-          "passed": true,
-          "raw": {
-            "reason": "hist_turn_positive",
-            "dif": 0.15657776515869415,
-            "histogram": 0.02083195362913376
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 39.95000076293945,
-            "max_price": 700.0,
-            "median_volume_20d": 31347898,
-            "min_volume": 500000,
-            "average_turnover_20d": 1409915397,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "2890",
-      "stock_name": "永豐金",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
-            "platform_low": 50.099998474121094,
-            "platform_high": 53.599998474121094,
-            "distance_to_high_pct": -0.93,
-            "low_not_falling": true,
-            "platform_range_pct": 6.99,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 54.099998474121094,
-            "ma5": 53.5,
-            "ma10": 52.7,
-            "ma20": 52.0,
-            "ma20_prior": 51.695000076293944,
-            "cluster_pct": 2.77
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 4.04,
-            "recent_3d_gain_pct": 1.31,
-            "upper_shadow_pct": 0.0,
-            "pressure": 53.599998474121094
-          }
-        },
-        "A4": {
-          "passed": false,
-          "raw": {
-            "reason": "none",
-            "dif": 0.6533115294704217,
-            "histogram": 0.32721862668536583
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 54.099998474121094,
-            "max_price": 700.0,
-            "median_volume_20d": 2037716,
-            "min_volume": 500000,
-            "average_turnover_20d": 126335876,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "2915",
-      "stock_name": "潤泰全",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
-            "platform_low": 60.79999923706055,
-            "platform_high": 67.30000305175781,
-            "distance_to_high_pct": 1.19,
-            "low_not_falling": true,
-            "platform_range_pct": 10.69,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 66.5,
-            "ma5": 66.4,
-            "ma10": 65.71000061035156,
-            "ma20": 64.25000019073487,
-            "ma20_prior": 63.83000011444092,
-            "cluster_pct": 3.23
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 3.5,
-            "recent_3d_gain_pct": 0.0,
-            "upper_shadow_pct": 0.0,
-            "pressure": 67.30000305175781
-          }
-        },
-        "A4": {
-          "passed": false,
-          "raw": {
-            "reason": "none",
-            "dif": 0.4644392809066318,
-            "histogram": 0.4709251842190347
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 66.5,
-            "max_price": 700.0,
-            "median_volume_20d": 35825623,
-            "min_volume": 500000,
-            "average_turnover_20d": 2463949619,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "2891",
-      "stock_name": "中信金",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
-            "platform_low": 45.900001525878906,
-            "platform_high": 52.29999923706055,
-            "distance_to_high_pct": 1.34,
-            "low_not_falling": true,
-            "platform_range_pct": 13.94,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 51.599998474121094,
-            "ma5": 51.13999938964844,
-            "ma10": 50.03499984741211,
-            "ma20": 49.364999771118164,
-            "ma20_prior": 48.58250007629395,
-            "cluster_pct": 3.44
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 4.53,
-            "recent_3d_gain_pct": 3.2,
-            "upper_shadow_pct": 0.19,
-            "pressure": 52.29999923706055
-          }
-        },
-        "A4": {
-          "passed": false,
-          "raw": {
-            "reason": "none",
-            "dif": 0.9281576888724885,
-            "histogram": 0.3358563086690032
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 51.599998474121094,
-            "max_price": 700.0,
-            "median_volume_20d": 10267187,
-            "min_volume": 500000,
-            "average_turnover_20d": 537352469,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "Y",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "4763",
-      "stock_name": "材料*-KY",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
-            "platform_low": 25.549999237060547,
-            "platform_high": 27.5,
-            "distance_to_high_pct": 1.45,
-            "low_not_falling": true,
-            "platform_range_pct": 7.63,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 27.100000381469727,
-            "ma5": 27.070000076293944,
-            "ma10": 26.880000114440918,
-            "ma20": 26.597500038146972,
-            "ma20_prior": 26.48500003814697,
-            "cluster_pct": 1.74
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 1.89,
-            "recent_3d_gain_pct": -0.55,
-            "upper_shadow_pct": 0.0,
-            "pressure": 27.5
-          }
-        },
-        "A4": {
-          "passed": false,
-          "raw": {
-            "reason": "none",
-            "dif": 0.20684104820716698,
-            "histogram": 0.05653867176472427
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 27.100000381469727,
-            "max_price": 700.0,
-            "median_volume_20d": 5516456,
-            "min_volume": 500000,
-            "average_turnover_20d": 163026377,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "9945",
-      "stock_name": "潤泰新",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
-            "platform_low": 49.5,
-            "platform_high": 52.20000076293945,
-            "distance_to_high_pct": 1.53,
-            "low_not_falling": true,
-            "platform_range_pct": 5.45,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 51.400001525878906,
-            "ma5": 51.44000015258789,
-            "ma10": 51.079999923706055,
-            "ma20": 50.76000003814697,
-            "ma20_prior": 50.425,
-            "cluster_pct": 1.32
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 1.26,
-            "recent_3d_gain_pct": -0.39,
-            "upper_shadow_pct": 0.19,
-            "pressure": 52.20000076293945
-          }
-        },
-        "A4": {
-          "passed": false,
-          "raw": {
-            "reason": "none",
-            "dif": 0.23351785060970087,
-            "histogram": 0.14781635210642008
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 51.400001525878906,
-            "max_price": 700.0,
-            "median_volume_20d": 16342643,
-            "min_volume": 500000,
-            "average_turnover_20d": 834397748,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "2609",
-      "stock_name": "陽明",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
-            "platform_low": 24.049999237060547,
-            "platform_high": 26.950000762939453,
-            "distance_to_high_pct": 1.86,
-            "low_not_falling": true,
-            "platform_range_pct": 12.06,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 26.450000762939453,
-            "ma5": 26.61999969482422,
-            "ma10": 26.30499973297119,
-            "ma20": 25.95749988555908,
-            "ma20_prior": 25.932499885559082,
-            "cluster_pct": 2.5
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 1.9,
-            "recent_3d_gain_pct": -1.31,
-            "upper_shadow_pct": 0.37,
-            "pressure": 26.950000762939453
-          }
-        },
-        "A4": {
-          "passed": false,
-          "raw": {
-            "reason": "none",
-            "dif": 0.12371677846114792,
-            "histogram": 0.19222268753331428
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 26.450000762939453,
-            "max_price": 700.0,
-            "median_volume_20d": 5712264,
-            "min_volume": 500000,
-            "average_turnover_20d": 169580054,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "8422",
-      "stock_name": "可寧衛",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
-            "platform_low": 66.5,
-            "platform_high": 71.69999694824219,
-            "distance_to_high_pct": 1.95,
-            "low_not_falling": true,
-            "platform_range_pct": 7.82,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 70.30000305175781,
-            "ma5": 70.46000061035156,
-            "ma10": 69.2400001525879,
-            "ma20": 69.03000030517578,
-            "ma20_prior": 68.47500038146973,
-            "cluster_pct": 2.03
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 1.84,
-            "recent_3d_gain_pct": 0.14,
-            "upper_shadow_pct": 0.0,
-            "pressure": 71.69999694824219
-          }
-        },
-        "A4": {
-          "passed": false,
-          "raw": {
-            "reason": "none",
-            "dif": 0.4725592801415104,
-            "histogram": 0.34402716906091424
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 70.30000305175781,
-            "max_price": 700.0,
-            "median_volume_20d": 1513602,
-            "min_volume": 500000,
-            "average_turnover_20d": 115832539,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "9910",
-      "stock_name": "豐泰",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -1613,7 +197,7 @@
           "raw": {
             "platform_low": 198.0,
             "platform_high": 220.0,
-            "distance_to_high_pct": 2.05,
+            "distance_to_high_pct": 0.45,
             "low_not_falling": true,
             "platform_range_pct": 11.11,
             "platform_days": 12
@@ -1622,39 +206,39 @@
         "A2": {
           "passed": true,
           "raw": {
-            "close": 215.5,
-            "ma5": 213.9,
-            "ma10": 209.6,
-            "ma20": 205.725,
-            "ma20_prior": 203.025,
-            "cluster_pct": 3.79
+            "close": 219.0,
+            "ma5": 216.2,
+            "ma10": 211.1,
+            "ma20": 206.775,
+            "ma20_prior": 204.2,
+            "cluster_pct": 4.3
           }
         },
         "A3": {
           "passed": true,
           "raw": {
-            "ma20_distance_pct": 4.75,
-            "recent_3d_gain_pct": 0.7,
-            "upper_shadow_pct": 0.7,
+            "ma20_distance_pct": 5.91,
+            "recent_3d_gain_pct": 0.46,
+            "upper_shadow_pct": 0.0,
             "pressure": 220.0
           }
         },
         "A4": {
-          "passed": false,
+          "passed": true,
           "raw": {
-            "reason": "none",
-            "dif": 3.923130306974855,
-            "histogram": 1.1185272179021055
+            "reason": "positive_hist_expanding",
+            "dif": 4.308564210246374,
+            "histogram": 1.203168896938899
           }
         },
         "A5": {
           "passed": true,
           "raw": {
-            "price": 215.5,
+            "price": 219.0,
             "max_price": 700.0,
             "median_volume_20d": 6878590,
             "min_volume": 500000,
-            "average_turnover_20d": 1829670219,
+            "average_turnover_20d": 1807570055,
             "min_turnover": 50000000.0,
             "sparse_day_ratio": 0.0,
             "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
@@ -1664,7 +248,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -1674,21 +258,21 @@
       "recheck_price": null,
       "signal_age_seconds": null,
       "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
+      "daily_data_date": "2026-08-14 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "BuyAfterSale": "",
         "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
       },
       "stock_id": "2603",
       "stock_name": "長榮",
       "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -1729,50 +313,50 @@
         "A1": {
           "passed": true,
           "raw": {
-            "platform_low": 83.5,
-            "platform_high": 94.0,
-            "distance_to_high_pct": 2.45,
+            "platform_low": 99.19999694824219,
+            "platform_high": 108.0,
+            "distance_to_high_pct": 0.46,
             "low_not_falling": true,
-            "platform_range_pct": 12.57,
+            "platform_range_pct": 8.87,
             "platform_days": 12
           }
         },
         "A2": {
           "passed": true,
           "raw": {
-            "close": 91.69999694824219,
-            "ma5": 91.73999938964843,
-            "ma10": 91.17000045776368,
-            "ma20": 90.15000038146972,
-            "ma20_prior": 89.97000045776367,
-            "cluster_pct": 1.73
+            "close": 107.5,
+            "ma5": 105.2,
+            "ma10": 104.5,
+            "ma20": 104.6,
+            "ma20_prior": 104.35,
+            "cluster_pct": 0.65
           }
         },
         "A3": {
           "passed": true,
           "raw": {
-            "ma20_distance_pct": 1.72,
-            "recent_3d_gain_pct": -1.29,
-            "upper_shadow_pct": 0.54,
-            "pressure": 94.0
+            "ma20_distance_pct": 2.77,
+            "recent_3d_gain_pct": 2.87,
+            "upper_shadow_pct": 0.0,
+            "pressure": 108.0
           }
         },
         "A4": {
-          "passed": false,
+          "passed": true,
           "raw": {
-            "reason": "none",
-            "dif": 0.7126954479242329,
-            "histogram": 0.19299975842004868
+            "reason": "positive_hist_expanding",
+            "dif": 0.09268664624647727,
+            "histogram": 0.7071149288188382
           }
         },
         "A5": {
           "passed": true,
           "raw": {
-            "price": 91.69999694824219,
+            "price": 107.5,
             "max_price": 700.0,
-            "median_volume_20d": 12473884,
+            "median_volume_20d": 3935928,
             "min_volume": 500000,
-            "average_turnover_20d": 1158233943,
+            "average_turnover_20d": 433272867,
             "min_turnover": 50000000.0,
             "sparse_day_ratio": 0.0,
             "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
@@ -1782,7 +366,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -1792,139 +376,21 @@
       "recheck_price": null,
       "signal_age_seconds": null,
       "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
+      "daily_data_date": "2026-08-14 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "BuyAfterSale": "",
         "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
       },
-      "stock_id": "3706",
-      "stock_name": "神達",
+      "stock_id": "2385",
+      "stock_name": "群光",
       "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
-            "platform_low": 104.0,
-            "platform_high": 117.5,
-            "distance_to_high_pct": 2.55,
-            "low_not_falling": true,
-            "platform_range_pct": 12.98,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 114.5,
-            "ma5": 114.6,
-            "ma10": 114.6,
-            "ma20": 113.125,
-            "ma20_prior": 113.125,
-            "cluster_pct": 1.29
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 1.22,
-            "recent_3d_gain_pct": 0.0,
-            "upper_shadow_pct": 0.43,
-            "pressure": 117.5
-          }
-        },
-        "A4": {
-          "passed": false,
-          "raw": {
-            "reason": "none",
-            "dif": 0.9285323956858349,
-            "histogram": -0.1506366825074954
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 114.5,
-            "max_price": 700.0,
-            "median_volume_20d": 3014446,
-            "min_volume": 500000,
-            "average_turnover_20d": 438430443,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "3005",
-      "stock_name": "神基",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -1967,7 +433,7 @@
           "raw": {
             "platform_low": 92.5,
             "platform_high": 102.5,
-            "distance_to_high_pct": 2.93,
+            "distance_to_high_pct": 0.98,
             "low_not_falling": true,
             "platform_range_pct": 10.81,
             "platform_days": 12
@@ -1976,39 +442,39 @@
         "A2": {
           "passed": true,
           "raw": {
-            "close": 99.5,
-            "ma5": 99.83999938964844,
+            "close": 101.5,
+            "ma5": 100.25999908447265,
             "ma10": 99.83999938964844,
-            "ma20": 97.84000015258789,
-            "ma20_prior": 97.40000038146972,
-            "cluster_pct": 2.01
+            "ma20": 98.2,
+            "ma20_prior": 97.57500038146972,
+            "cluster_pct": 2.03
           }
         },
         "A3": {
           "passed": true,
           "raw": {
-            "ma20_distance_pct": 1.7,
-            "recent_3d_gain_pct": -1.49,
-            "upper_shadow_pct": 0.5,
+            "ma20_distance_pct": 3.36,
+            "recent_3d_gain_pct": 1.91,
+            "upper_shadow_pct": 0.99,
             "pressure": 102.5
           }
         },
         "A4": {
-          "passed": false,
+          "passed": true,
           "raw": {
-            "reason": "none",
-            "dif": 0.6372481786305002,
-            "histogram": 0.14125454720777975
+            "reason": "positive_hist_expanding",
+            "dif": 0.8011152122850831,
+            "histogram": 0.24409726468989001
           }
         },
         "A5": {
           "passed": true,
           "raw": {
-            "price": 99.5,
+            "price": 101.5,
             "max_price": 700.0,
-            "median_volume_20d": 19335758,
+            "median_volume_20d": 18193542,
             "min_volume": 500000,
-            "average_turnover_20d": 2073923538,
+            "average_turnover_20d": 2037327903,
             "min_turnover": 50000000.0,
             "sparse_day_ratio": 0.0,
             "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
@@ -2018,7 +484,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2028,21 +494,21 @@
       "recheck_price": null,
       "signal_age_seconds": null,
       "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
+      "daily_data_date": "2026-08-14 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "BuyAfterSale": "",
         "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
       },
       "stock_id": "2882",
       "stock_name": "國泰金",
       "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -2083,50 +549,50 @@
         "A1": {
           "passed": true,
           "raw": {
-            "platform_low": 59.900001525878906,
-            "platform_high": 67.5,
-            "distance_to_high_pct": 2.96,
+            "platform_low": 38.0,
+            "platform_high": 41.04999923706055,
+            "distance_to_high_pct": 1.22,
             "low_not_falling": true,
-            "platform_range_pct": 12.69,
+            "platform_range_pct": 8.03,
             "platform_days": 12
           }
         },
         "A2": {
           "passed": true,
           "raw": {
-            "close": 65.5,
-            "ma5": 66.72000122070312,
-            "ma10": 65.15000076293946,
-            "ma20": 63.75500011444092,
-            "ma20_prior": 63.30499973297119,
-            "cluster_pct": 4.53
+            "close": 40.54999923706055,
+            "ma5": 39.65999984741211,
+            "ma10": 39.51499977111816,
+            "ma20": 39.307058334350586,
+            "ma20_prior": 39.1621072769165,
+            "cluster_pct": 0.87
           }
         },
         "A3": {
           "passed": true,
           "raw": {
-            "ma20_distance_pct": 2.74,
-            "recent_3d_gain_pct": -1.95,
-            "upper_shadow_pct": 0.0,
-            "pressure": 67.5
+            "ma20_distance_pct": 3.16,
+            "recent_3d_gain_pct": 3.84,
+            "upper_shadow_pct": 0.99,
+            "pressure": 41.04999923706055
           }
         },
         "A4": {
-          "passed": false,
+          "passed": true,
           "raw": {
-            "reason": "none",
-            "dif": 1.0063465755372079,
-            "histogram": 0.32204649721910406
+            "reason": "positive_hist_expanding",
+            "dif": 0.2623586013834114,
+            "histogram": 0.10129023188308078
           }
         },
         "A5": {
           "passed": true,
           "raw": {
-            "price": 65.5,
+            "price": 40.54999923706055,
             "max_price": 700.0,
-            "median_volume_20d": 3629509,
+            "median_volume_20d": 31347898,
             "min_volume": 500000,
-            "average_turnover_20d": 247372329,
+            "average_turnover_20d": 1385763961,
             "min_turnover": 50000000.0,
             "sparse_day_ratio": 0.0,
             "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
@@ -2136,7 +602,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2146,21 +612,139 @@
       "recheck_price": null,
       "signal_age_seconds": null,
       "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
+      "daily_data_date": "2026-08-14 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "BuyAfterSale": "",
         "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
       },
-      "stock_id": "2606",
-      "stock_name": "裕民",
+      "stock_id": "2890",
+      "stock_name": "永豐金",
       "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
+    },
+    {
+      "strategy_version": "A5-N-research-default-v0.1-20260813",
+      "config": {
+        "parameter_status": "research_default",
+        "platform_lookback_days": 12,
+        "platform_exclude_recent_days": 2,
+        "platform_max_range_pct": 15.0,
+        "platform_min_days": 8,
+        "daily_near_high_pct": 4.0,
+        "daily_ma_cluster_pct": 5.0,
+        "daily_max_ma20_distance_pct": 8.0,
+        "daily_max_recent_3d_gain_pct": 12.0,
+        "daily_max_upper_shadow_pct": 4.0,
+        "liquidity_lookback_days": 20,
+        "a_pool_size": 40,
+        "a_pool_min_size": 30,
+        "a_pool_max_size": 50,
+        "max_ntfy_entries_per_scan": 4,
+        "hourly_structure_bars": 5,
+        "hourly_near_breakout_pct": 4.0,
+        "hourly_max_ema5_distance_pct": 3.0,
+        "breakout_buffer_pct": 0.0,
+        "pullback_touch_tolerance_pct": 0.8,
+        "pullback_break_tolerance_pct": 0.5,
+        "relative_volume_min": 1.2,
+        "pullback_max_volume_ratio": 0.8,
+        "max_signal_age_seconds": 900,
+        "max_breakout_extension_pct": 2.0,
+        "max_stop_risk_pct": 1.5,
+        "min_reward_risk": 2.0
+      },
+      "strategy_state": "DAILY_CANDIDATE",
+      "reject_reason": [
+        "B_DATA_INSUFFICIENT"
+      ],
+      "A": {
+        "A1": {
+          "passed": true,
+          "raw": {
+            "platform_low": 83.5,
+            "platform_high": 94.0,
+            "distance_to_high_pct": 1.38,
+            "low_not_falling": true,
+            "platform_range_pct": 12.57,
+            "platform_days": 12
+          }
+        },
+        "A2": {
+          "passed": true,
+          "raw": {
+            "close": 92.69999694824219,
+            "ma5": 91.93999938964843,
+            "ma10": 91.7,
+            "ma20": 90.37000007629395,
+            "ma20_prior": 89.98500061035156,
+            "cluster_pct": 1.69
+          }
+        },
+        "A3": {
+          "passed": true,
+          "raw": {
+            "ma20_distance_pct": 2.58,
+            "recent_3d_gain_pct": 3.0,
+            "upper_shadow_pct": 1.4,
+            "pressure": 94.0
+          }
+        },
+        "A4": {
+          "passed": true,
+          "raw": {
+            "reason": "positive_hist_expanding",
+            "dif": 0.7865030001026696,
+            "histogram": 0.21344584847878822
+          }
+        },
+        "A5": {
+          "passed": true,
+          "raw": {
+            "price": 92.69999694824219,
+            "max_price": 700.0,
+            "median_volume_20d": 12473884,
+            "min_volume": 500000,
+            "average_turnover_20d": 1187710400,
+            "min_turnover": 50000000.0,
+            "sparse_day_ratio": 0.0,
+            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
+            "reasons": []
+          }
+        }
+      },
+      "B": {},
+      "C": {},
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
+      "breakout_level": null,
+      "breakout_timestamp": null,
+      "pullback_low": null,
+      "signal_timestamp": null,
+      "signal_price": null,
+      "recheck_timestamp": null,
+      "recheck_price": null,
+      "signal_age_seconds": null,
+      "raw_last_timestamp": null,
+      "daily_data_date": "2026-08-14 00:00:00",
+      "last_completed_60k_timestamp": null,
+      "last_completed_5k_timestamp": null,
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
+      "official_daytrade_eligibility": {
+        "source": "FinMind/TaiwanStockDayTrading",
+        "date": "2026-08-17",
+        "BuyAfterSale": "",
+        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+      },
+      "stock_id": "3706",
+      "stock_name": "神達",
+      "market_type": "twse",
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -2203,7 +787,7 @@
           "raw": {
             "platform_low": 120.5,
             "platform_high": 132.5,
-            "distance_to_high_pct": 3.02,
+            "distance_to_high_pct": 2.26,
             "low_not_falling": true,
             "platform_range_pct": 9.96,
             "platform_days": 12
@@ -2212,39 +796,39 @@
         "A2": {
           "passed": true,
           "raw": {
-            "close": 128.5,
-            "ma5": 127.8,
-            "ma10": 128.25,
-            "ma20": 126.975,
-            "ma20_prior": 126.725,
-            "cluster_pct": 0.99
+            "close": 129.5,
+            "ma5": 128.3,
+            "ma10": 128.2,
+            "ma20": 127.225,
+            "ma20_prior": 126.875,
+            "cluster_pct": 0.83
           }
         },
         "A3": {
           "passed": true,
           "raw": {
-            "ma20_distance_pct": 1.2,
-            "recent_3d_gain_pct": 0.0,
+            "ma20_distance_pct": 1.79,
+            "recent_3d_gain_pct": 1.17,
             "upper_shadow_pct": 0.39,
             "pressure": 132.5
           }
         },
         "A4": {
-          "passed": false,
+          "passed": true,
           "raw": {
-            "reason": "none",
-            "dif": 0.4404221770343497,
-            "histogram": -0.03723311475315416
+            "reason": "hist_turn_positive",
+            "dif": 0.5844604985654485,
+            "histogram": 0.08544416542235567
           }
         },
         "A5": {
           "passed": true,
           "raw": {
-            "price": 128.5,
+            "price": 129.5,
             "max_price": 700.0,
-            "median_volume_20d": 18257036,
+            "median_volume_20d": 16465632,
             "min_volume": 500000,
-            "average_turnover_20d": 2500556657,
+            "average_turnover_20d": 2351113368,
             "min_turnover": 50000000.0,
             "sparse_day_ratio": 0.0,
             "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
@@ -2254,7 +838,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2264,21 +848,21 @@
       "recheck_price": null,
       "signal_age_seconds": null,
       "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
+      "daily_data_date": "2026-08-14 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "BuyAfterSale": "",
         "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
       },
       "stock_id": "2881",
       "stock_name": "富邦金",
       "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -2319,50 +903,50 @@
         "A1": {
           "passed": true,
           "raw": {
-            "platform_low": 39.900001525878906,
-            "platform_high": 42.599998474121094,
-            "distance_to_high_pct": 3.05,
+            "platform_low": 28.381961822509766,
+            "platform_high": 31.7418212890625,
+            "distance_to_high_pct": 2.65,
             "low_not_falling": true,
-            "platform_range_pct": 6.77,
+            "platform_range_pct": 11.84,
             "platform_days": 12
           }
         },
         "A2": {
           "passed": true,
           "raw": {
-            "close": 41.29999923706055,
-            "ma5": 41.210000610351564,
-            "ma10": 40.739999771118164,
-            "ma20": 40.86250019073486,
-            "ma20_prior": 40.72500019073486,
-            "cluster_pct": 1.14
+            "close": 30.899999618530273,
+            "ma5": 30.39701156616211,
+            "ma10": 30.463757514953613,
+            "ma20": 30.21419486999512,
+            "ma20_prior": 30.12068901062012,
+            "cluster_pct": 0.81
           }
         },
         "A3": {
           "passed": true,
           "raw": {
-            "ma20_distance_pct": 1.07,
-            "recent_3d_gain_pct": 1.47,
-            "upper_shadow_pct": 0.24,
-            "pressure": 42.599998474121094
+            "ma20_distance_pct": 2.27,
+            "recent_3d_gain_pct": 3.0,
+            "upper_shadow_pct": 1.46,
+            "pressure": 31.7418212890625
           }
         },
         "A4": {
-          "passed": false,
+          "passed": true,
           "raw": {
-            "reason": "none",
-            "dif": 0.1294960376549099,
-            "histogram": 0.14956458614346346
+            "reason": "positive_hist_expanding",
+            "dif": -0.036781222111340384,
+            "histogram": 0.18779527849207284
           }
         },
         "A5": {
           "passed": true,
           "raw": {
-            "price": 41.29999923706055,
+            "price": 30.899999618530273,
             "max_price": 700.0,
-            "median_volume_20d": 2372246,
+            "median_volume_20d": 10751332,
             "min_volume": 500000,
-            "average_turnover_20d": 111457371,
+            "average_turnover_20d": 325276971,
             "min_turnover": 50000000.0,
             "sparse_day_ratio": 0.0,
             "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
@@ -2372,7 +956,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2382,21 +966,21 @@
       "recheck_price": null,
       "signal_age_seconds": null,
       "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
+      "daily_data_date": "2026-08-14 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "BuyAfterSale": "",
         "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
       },
-      "stock_id": "1229",
-      "stock_name": "聯華",
+      "stock_id": "6005",
+      "stock_name": "群益證",
       "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -2437,50 +1021,286 @@
         "A1": {
           "passed": true,
           "raw": {
-            "platform_low": 18.649999618530273,
-            "platform_high": 19.899999618530273,
-            "distance_to_high_pct": 3.52,
+            "platform_low": 104.0,
+            "platform_high": 117.5,
+            "distance_to_high_pct": 0.85,
             "low_not_falling": true,
-            "platform_range_pct": 6.7,
+            "platform_range_pct": 12.98,
             "platform_days": 12
           }
         },
         "A2": {
           "passed": true,
           "raw": {
-            "close": 19.200000762939453,
-            "ma5": 19.479999923706053,
-            "ma10": 19.195000076293944,
-            "ma20": 19.060000038146974,
-            "ma20_prior": 18.92249994277954,
-            "cluster_pct": 2.19
+            "close": 116.5,
+            "ma5": 114.9,
+            "ma10": 114.85,
+            "ma20": 113.45,
+            "ma20_prior": 113.125,
+            "cluster_pct": 1.24
           }
         },
         "A3": {
           "passed": true,
           "raw": {
-            "ma20_distance_pct": 0.73,
-            "recent_3d_gain_pct": -2.29,
+            "ma20_distance_pct": 2.69,
+            "recent_3d_gain_pct": 1.75,
+            "upper_shadow_pct": 0.86,
+            "pressure": 117.5
+          }
+        },
+        "A4": {
+          "passed": false,
+          "raw": {
+            "reason": "none",
+            "dif": 1.069680678291391,
+            "histogram": -0.00759071992155147
+          }
+        },
+        "A5": {
+          "passed": true,
+          "raw": {
+            "price": 116.5,
+            "max_price": 700.0,
+            "median_volume_20d": 3014446,
+            "min_volume": 500000,
+            "average_turnover_20d": 426365090,
+            "min_turnover": 50000000.0,
+            "sparse_day_ratio": 0.0,
+            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
+            "reasons": []
+          }
+        }
+      },
+      "B": {},
+      "C": {},
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
+      "breakout_level": null,
+      "breakout_timestamp": null,
+      "pullback_low": null,
+      "signal_timestamp": null,
+      "signal_price": null,
+      "recheck_timestamp": null,
+      "recheck_price": null,
+      "signal_age_seconds": null,
+      "raw_last_timestamp": null,
+      "daily_data_date": "2026-08-14 00:00:00",
+      "last_completed_60k_timestamp": null,
+      "last_completed_5k_timestamp": null,
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
+      "official_daytrade_eligibility": {
+        "source": "FinMind/TaiwanStockDayTrading",
+        "date": "2026-08-17",
+        "BuyAfterSale": "",
+        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+      },
+      "stock_id": "3005",
+      "stock_name": "神基",
+      "market_type": "twse",
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
+    },
+    {
+      "strategy_version": "A5-N-research-default-v0.1-20260813",
+      "config": {
+        "parameter_status": "research_default",
+        "platform_lookback_days": 12,
+        "platform_exclude_recent_days": 2,
+        "platform_max_range_pct": 15.0,
+        "platform_min_days": 8,
+        "daily_near_high_pct": 4.0,
+        "daily_ma_cluster_pct": 5.0,
+        "daily_max_ma20_distance_pct": 8.0,
+        "daily_max_recent_3d_gain_pct": 12.0,
+        "daily_max_upper_shadow_pct": 4.0,
+        "liquidity_lookback_days": 20,
+        "a_pool_size": 40,
+        "a_pool_min_size": 30,
+        "a_pool_max_size": 50,
+        "max_ntfy_entries_per_scan": 4,
+        "hourly_structure_bars": 5,
+        "hourly_near_breakout_pct": 4.0,
+        "hourly_max_ema5_distance_pct": 3.0,
+        "breakout_buffer_pct": 0.0,
+        "pullback_touch_tolerance_pct": 0.8,
+        "pullback_break_tolerance_pct": 0.5,
+        "relative_volume_min": 1.2,
+        "pullback_max_volume_ratio": 0.8,
+        "max_signal_age_seconds": 900,
+        "max_breakout_extension_pct": 2.0,
+        "max_stop_risk_pct": 1.5,
+        "min_reward_risk": 2.0
+      },
+      "strategy_state": "DAILY_CANDIDATE",
+      "reject_reason": [
+        "B_DATA_INSUFFICIENT"
+      ],
+      "A": {
+        "A1": {
+          "passed": true,
+          "raw": {
+            "platform_low": 49.5,
+            "platform_high": 52.20000076293945,
+            "distance_to_high_pct": 1.15,
+            "low_not_falling": true,
+            "platform_range_pct": 5.45,
+            "platform_days": 12
+          }
+        },
+        "A2": {
+          "passed": true,
+          "raw": {
+            "close": 51.599998474121094,
+            "ma5": 51.65999984741211,
+            "ma10": 51.15999984741211,
+            "ma20": 50.87999992370605,
+            "ma20_prior": 50.625,
+            "cluster_pct": 1.51
+          }
+        },
+        "A3": {
+          "passed": true,
+          "raw": {
+            "ma20_distance_pct": 1.42,
+            "recent_3d_gain_pct": -0.77,
+            "upper_shadow_pct": 0.58,
+            "pressure": 52.20000076293945
+          }
+        },
+        "A4": {
+          "passed": false,
+          "raw": {
+            "reason": "none",
+            "dif": 0.24586470739453148,
+            "histogram": 0.12813056711300053
+          }
+        },
+        "A5": {
+          "passed": true,
+          "raw": {
+            "price": 51.599998474121094,
+            "max_price": 700.0,
+            "median_volume_20d": 16842978,
+            "min_volume": 500000,
+            "average_turnover_20d": 850366550,
+            "min_turnover": 50000000.0,
+            "sparse_day_ratio": 0.0,
+            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
+            "reasons": []
+          }
+        }
+      },
+      "B": {},
+      "C": {},
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
+      "breakout_level": null,
+      "breakout_timestamp": null,
+      "pullback_low": null,
+      "signal_timestamp": null,
+      "signal_price": null,
+      "recheck_timestamp": null,
+      "recheck_price": null,
+      "signal_age_seconds": null,
+      "raw_last_timestamp": null,
+      "daily_data_date": "2026-08-14 00:00:00",
+      "last_completed_60k_timestamp": null,
+      "last_completed_5k_timestamp": null,
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
+      "official_daytrade_eligibility": {
+        "source": "FinMind/TaiwanStockDayTrading",
+        "date": "2026-08-17",
+        "BuyAfterSale": "",
+        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+      },
+      "stock_id": "2609",
+      "stock_name": "陽明",
+      "market_type": "twse",
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
+    },
+    {
+      "strategy_version": "A5-N-research-default-v0.1-20260813",
+      "config": {
+        "parameter_status": "research_default",
+        "platform_lookback_days": 12,
+        "platform_exclude_recent_days": 2,
+        "platform_max_range_pct": 15.0,
+        "platform_min_days": 8,
+        "daily_near_high_pct": 4.0,
+        "daily_ma_cluster_pct": 5.0,
+        "daily_max_ma20_distance_pct": 8.0,
+        "daily_max_recent_3d_gain_pct": 12.0,
+        "daily_max_upper_shadow_pct": 4.0,
+        "liquidity_lookback_days": 20,
+        "a_pool_size": 40,
+        "a_pool_min_size": 30,
+        "a_pool_max_size": 50,
+        "max_ntfy_entries_per_scan": 4,
+        "hourly_structure_bars": 5,
+        "hourly_near_breakout_pct": 4.0,
+        "hourly_max_ema5_distance_pct": 3.0,
+        "breakout_buffer_pct": 0.0,
+        "pullback_touch_tolerance_pct": 0.8,
+        "pullback_break_tolerance_pct": 0.5,
+        "relative_volume_min": 1.2,
+        "pullback_max_volume_ratio": 0.8,
+        "max_signal_age_seconds": 900,
+        "max_breakout_extension_pct": 2.0,
+        "max_stop_risk_pct": 1.5,
+        "min_reward_risk": 2.0
+      },
+      "strategy_state": "DAILY_CANDIDATE",
+      "reject_reason": [
+        "B_DATA_INSUFFICIENT"
+      ],
+      "A": {
+        "A1": {
+          "passed": true,
+          "raw": {
+            "platform_low": 80.5999984741211,
+            "platform_high": 86.19999694824219,
+            "distance_to_high_pct": 2.09,
+            "low_not_falling": true,
+            "platform_range_pct": 6.95,
+            "platform_days": 12
+          }
+        },
+        "A2": {
+          "passed": true,
+          "raw": {
+            "close": 84.4000015258789,
+            "ma5": 85.35999908447266,
+            "ma10": 83.83000030517579,
+            "ma20": 82.99500007629395,
+            "ma20_prior": 82.65,
+            "cluster_pct": 2.8
+          }
+        },
+        "A3": {
+          "passed": true,
+          "raw": {
+            "ma20_distance_pct": 1.69,
+            "recent_3d_gain_pct": -1.17,
             "upper_shadow_pct": 0.0,
-            "pressure": 19.899999618530273
+            "pressure": 86.19999694824219
           }
         },
         "A4": {
           "passed": false,
           "raw": {
             "reason": "none",
-            "dif": 0.1656814992641351,
-            "histogram": 0.05131026000287266
+            "dif": 0.898844561125216,
+            "histogram": 0.28604116375656896
           }
         },
         "A5": {
           "passed": true,
           "raw": {
-            "price": 19.200000762939453,
+            "price": 84.4000015258789,
             "max_price": 700.0,
-            "median_volume_20d": 39350766,
+            "median_volume_20d": 963350,
             "min_volume": 500000,
-            "average_turnover_20d": 910327298,
+            "average_turnover_20d": 84242674,
             "min_turnover": 50000000.0,
             "sparse_day_ratio": 0.0,
             "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
@@ -2490,7 +1310,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2500,21 +1320,493 @@
       "recheck_price": null,
       "signal_age_seconds": null,
       "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
+      "daily_data_date": "2026-08-14 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "BuyAfterSale": "",
         "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
       },
-      "stock_id": "2002",
-      "stock_name": "中鋼",
+      "stock_id": "9941",
+      "stock_name": "裕融",
       "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
+    },
+    {
+      "strategy_version": "A5-N-research-default-v0.1-20260813",
+      "config": {
+        "parameter_status": "research_default",
+        "platform_lookback_days": 12,
+        "platform_exclude_recent_days": 2,
+        "platform_max_range_pct": 15.0,
+        "platform_min_days": 8,
+        "daily_near_high_pct": 4.0,
+        "daily_ma_cluster_pct": 5.0,
+        "daily_max_ma20_distance_pct": 8.0,
+        "daily_max_recent_3d_gain_pct": 12.0,
+        "daily_max_upper_shadow_pct": 4.0,
+        "liquidity_lookback_days": 20,
+        "a_pool_size": 40,
+        "a_pool_min_size": 30,
+        "a_pool_max_size": 50,
+        "max_ntfy_entries_per_scan": 4,
+        "hourly_structure_bars": 5,
+        "hourly_near_breakout_pct": 4.0,
+        "hourly_max_ema5_distance_pct": 3.0,
+        "breakout_buffer_pct": 0.0,
+        "pullback_touch_tolerance_pct": 0.8,
+        "pullback_break_tolerance_pct": 0.5,
+        "relative_volume_min": 1.2,
+        "pullback_max_volume_ratio": 0.8,
+        "max_signal_age_seconds": 900,
+        "max_breakout_extension_pct": 2.0,
+        "max_stop_risk_pct": 1.5,
+        "min_reward_risk": 2.0
+      },
+      "strategy_state": "DAILY_CANDIDATE",
+      "reject_reason": [
+        "B_DATA_INSUFFICIENT"
+      ],
+      "A": {
+        "A1": {
+          "passed": true,
+          "raw": {
+            "platform_low": 60.79999923706055,
+            "platform_high": 67.30000305175781,
+            "distance_to_high_pct": 2.23,
+            "low_not_falling": true,
+            "platform_range_pct": 10.69,
+            "platform_days": 12
+          }
+        },
+        "A2": {
+          "passed": true,
+          "raw": {
+            "close": 65.80000305175781,
+            "ma5": 66.44000091552735,
+            "ma10": 65.80000076293945,
+            "ma20": 64.4350004196167,
+            "ma20_prior": 63.92000026702881,
+            "cluster_pct": 3.05
+          }
+        },
+        "A3": {
+          "passed": true,
+          "raw": {
+            "ma20_distance_pct": 2.12,
+            "recent_3d_gain_pct": -1.5,
+            "upper_shadow_pct": 0.45,
+            "pressure": 67.30000305175781
+          }
+        },
+        "A4": {
+          "passed": false,
+          "raw": {
+            "reason": "none",
+            "dif": 0.4004532181198499,
+            "histogram": 0.3255512971458022
+          }
+        },
+        "A5": {
+          "passed": true,
+          "raw": {
+            "price": 65.80000305175781,
+            "max_price": 700.0,
+            "median_volume_20d": 34384792,
+            "min_volume": 500000,
+            "average_turnover_20d": 2281614443,
+            "min_turnover": 50000000.0,
+            "sparse_day_ratio": 0.0,
+            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
+            "reasons": []
+          }
+        }
+      },
+      "B": {},
+      "C": {},
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
+      "breakout_level": null,
+      "breakout_timestamp": null,
+      "pullback_low": null,
+      "signal_timestamp": null,
+      "signal_price": null,
+      "recheck_timestamp": null,
+      "recheck_price": null,
+      "signal_age_seconds": null,
+      "raw_last_timestamp": null,
+      "daily_data_date": "2026-08-14 00:00:00",
+      "last_completed_60k_timestamp": null,
+      "last_completed_5k_timestamp": null,
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
+      "official_daytrade_eligibility": {
+        "source": "FinMind/TaiwanStockDayTrading",
+        "date": "2026-08-17",
+        "BuyAfterSale": "",
+        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+      },
+      "stock_id": "2891",
+      "stock_name": "中信金",
+      "market_type": "twse",
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
+    },
+    {
+      "strategy_version": "A5-N-research-default-v0.1-20260813",
+      "config": {
+        "parameter_status": "research_default",
+        "platform_lookback_days": 12,
+        "platform_exclude_recent_days": 2,
+        "platform_max_range_pct": 15.0,
+        "platform_min_days": 8,
+        "daily_near_high_pct": 4.0,
+        "daily_ma_cluster_pct": 5.0,
+        "daily_max_ma20_distance_pct": 8.0,
+        "daily_max_recent_3d_gain_pct": 12.0,
+        "daily_max_upper_shadow_pct": 4.0,
+        "liquidity_lookback_days": 20,
+        "a_pool_size": 40,
+        "a_pool_min_size": 30,
+        "a_pool_max_size": 50,
+        "max_ntfy_entries_per_scan": 4,
+        "hourly_structure_bars": 5,
+        "hourly_near_breakout_pct": 4.0,
+        "hourly_max_ema5_distance_pct": 3.0,
+        "breakout_buffer_pct": 0.0,
+        "pullback_touch_tolerance_pct": 0.8,
+        "pullback_break_tolerance_pct": 0.5,
+        "relative_volume_min": 1.2,
+        "pullback_max_volume_ratio": 0.8,
+        "max_signal_age_seconds": 900,
+        "max_breakout_extension_pct": 2.0,
+        "max_stop_risk_pct": 1.5,
+        "min_reward_risk": 2.0
+      },
+      "strategy_state": "DAILY_CANDIDATE",
+      "reject_reason": [
+        "B_DATA_INSUFFICIENT"
+      ],
+      "A": {
+        "A1": {
+          "passed": true,
+          "raw": {
+            "platform_low": 24.049999237060547,
+            "platform_high": 27.149999618530273,
+            "distance_to_high_pct": 2.76,
+            "low_not_falling": true,
+            "platform_range_pct": 12.89,
+            "platform_days": 12
+          }
+        },
+        "A2": {
+          "passed": true,
+          "raw": {
+            "close": 26.399999618530273,
+            "ma5": 26.639999771118163,
+            "ma10": 26.469999694824217,
+            "ma20": 25.98499984741211,
+            "ma20_prior": 25.96249990463257,
+            "cluster_pct": 2.48
+          }
+        },
+        "A3": {
+          "passed": true,
+          "raw": {
+            "ma20_distance_pct": 1.6,
+            "recent_3d_gain_pct": -0.94,
+            "upper_shadow_pct": 0.38,
+            "pressure": 27.149999618530273
+          }
+        },
+        "A4": {
+          "passed": false,
+          "raw": {
+            "reason": "none",
+            "dif": 0.10861986390885292,
+            "histogram": 0.1417006183848154
+          }
+        },
+        "A5": {
+          "passed": true,
+          "raw": {
+            "price": 26.399999618530273,
+            "max_price": 700.0,
+            "median_volume_20d": 5391204,
+            "min_volume": 500000,
+            "average_turnover_20d": 161949019,
+            "min_turnover": 50000000.0,
+            "sparse_day_ratio": 0.0,
+            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
+            "reasons": []
+          }
+        }
+      },
+      "B": {},
+      "C": {},
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
+      "breakout_level": null,
+      "breakout_timestamp": null,
+      "pullback_low": null,
+      "signal_timestamp": null,
+      "signal_price": null,
+      "recheck_timestamp": null,
+      "recheck_price": null,
+      "signal_age_seconds": null,
+      "raw_last_timestamp": null,
+      "daily_data_date": "2026-08-14 00:00:00",
+      "last_completed_60k_timestamp": null,
+      "last_completed_5k_timestamp": null,
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
+      "official_daytrade_eligibility": {
+        "source": "FinMind/TaiwanStockDayTrading",
+        "date": "2026-08-17",
+        "BuyAfterSale": "",
+        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+      },
+      "stock_id": "8422",
+      "stock_name": "可寧衛",
+      "market_type": "twse",
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
+    },
+    {
+      "strategy_version": "A5-N-research-default-v0.1-20260813",
+      "config": {
+        "parameter_status": "research_default",
+        "platform_lookback_days": 12,
+        "platform_exclude_recent_days": 2,
+        "platform_max_range_pct": 15.0,
+        "platform_min_days": 8,
+        "daily_near_high_pct": 4.0,
+        "daily_ma_cluster_pct": 5.0,
+        "daily_max_ma20_distance_pct": 8.0,
+        "daily_max_recent_3d_gain_pct": 12.0,
+        "daily_max_upper_shadow_pct": 4.0,
+        "liquidity_lookback_days": 20,
+        "a_pool_size": 40,
+        "a_pool_min_size": 30,
+        "a_pool_max_size": 50,
+        "max_ntfy_entries_per_scan": 4,
+        "hourly_structure_bars": 5,
+        "hourly_near_breakout_pct": 4.0,
+        "hourly_max_ema5_distance_pct": 3.0,
+        "breakout_buffer_pct": 0.0,
+        "pullback_touch_tolerance_pct": 0.8,
+        "pullback_break_tolerance_pct": 0.5,
+        "relative_volume_min": 1.2,
+        "pullback_max_volume_ratio": 0.8,
+        "max_signal_age_seconds": 900,
+        "max_breakout_extension_pct": 2.0,
+        "max_stop_risk_pct": 1.5,
+        "min_reward_risk": 2.0
+      },
+      "strategy_state": "DAILY_CANDIDATE",
+      "reject_reason": [
+        "B_DATA_INSUFFICIENT"
+      ],
+      "A": {
+        "A1": {
+          "passed": true,
+          "raw": {
+            "platform_low": 59.900001525878906,
+            "platform_high": 68.4000015258789,
+            "distance_to_high_pct": 3.07,
+            "low_not_falling": true,
+            "platform_range_pct": 14.19,
+            "platform_days": 12
+          }
+        },
+        "A2": {
+          "passed": true,
+          "raw": {
+            "close": 66.30000305175781,
+            "ma5": 66.4800018310547,
+            "ma10": 65.52000122070312,
+            "ma20": 64.03000030517578,
+            "ma20_prior": 63.499999809265134,
+            "cluster_pct": 3.7
+          }
+        },
+        "A3": {
+          "passed": true,
+          "raw": {
+            "ma20_distance_pct": 3.55,
+            "recent_3d_gain_pct": -0.15,
+            "upper_shadow_pct": 0.0,
+            "pressure": 68.4000015258789
+          }
+        },
+        "A4": {
+          "passed": false,
+          "raw": {
+            "reason": "none",
+            "dif": 0.96860525256551,
+            "histogram": 0.22744413939792496
+          }
+        },
+        "A5": {
+          "passed": true,
+          "raw": {
+            "price": 66.30000305175781,
+            "max_price": 700.0,
+            "median_volume_20d": 3621346,
+            "min_volume": 500000,
+            "average_turnover_20d": 245901935,
+            "min_turnover": 50000000.0,
+            "sparse_day_ratio": 0.0,
+            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
+            "reasons": []
+          }
+        }
+      },
+      "B": {},
+      "C": {},
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
+      "breakout_level": null,
+      "breakout_timestamp": null,
+      "pullback_low": null,
+      "signal_timestamp": null,
+      "signal_price": null,
+      "recheck_timestamp": null,
+      "recheck_price": null,
+      "signal_age_seconds": null,
+      "raw_last_timestamp": null,
+      "daily_data_date": "2026-08-14 00:00:00",
+      "last_completed_60k_timestamp": null,
+      "last_completed_5k_timestamp": null,
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
+      "official_daytrade_eligibility": {
+        "source": "FinMind/TaiwanStockDayTrading",
+        "date": "2026-08-17",
+        "BuyAfterSale": "",
+        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+      },
+      "stock_id": "2606",
+      "stock_name": "裕民",
+      "market_type": "twse",
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
+    },
+    {
+      "strategy_version": "A5-N-research-default-v0.1-20260813",
+      "config": {
+        "parameter_status": "research_default",
+        "platform_lookback_days": 12,
+        "platform_exclude_recent_days": 2,
+        "platform_max_range_pct": 15.0,
+        "platform_min_days": 8,
+        "daily_near_high_pct": 4.0,
+        "daily_ma_cluster_pct": 5.0,
+        "daily_max_ma20_distance_pct": 8.0,
+        "daily_max_recent_3d_gain_pct": 12.0,
+        "daily_max_upper_shadow_pct": 4.0,
+        "liquidity_lookback_days": 20,
+        "a_pool_size": 40,
+        "a_pool_min_size": 30,
+        "a_pool_max_size": 50,
+        "max_ntfy_entries_per_scan": 4,
+        "hourly_structure_bars": 5,
+        "hourly_near_breakout_pct": 4.0,
+        "hourly_max_ema5_distance_pct": 3.0,
+        "breakout_buffer_pct": 0.0,
+        "pullback_touch_tolerance_pct": 0.8,
+        "pullback_break_tolerance_pct": 0.5,
+        "relative_volume_min": 1.2,
+        "pullback_max_volume_ratio": 0.8,
+        "max_signal_age_seconds": 900,
+        "max_breakout_extension_pct": 2.0,
+        "max_stop_risk_pct": 1.5,
+        "min_reward_risk": 2.0
+      },
+      "strategy_state": "DAILY_CANDIDATE",
+      "reject_reason": [
+        "B_DATA_INSUFFICIENT"
+      ],
+      "A": {
+        "A1": {
+          "passed": true,
+          "raw": {
+            "platform_low": 77.69999694824219,
+            "platform_high": 88.80000305175781,
+            "distance_to_high_pct": 3.49,
+            "low_not_falling": true,
+            "platform_range_pct": 14.29,
+            "platform_days": 12
+          }
+        },
+        "A2": {
+          "passed": true,
+          "raw": {
+            "close": 85.69999694824219,
+            "ma5": 86.85999908447266,
+            "ma10": 86.0,
+            "ma20": 83.49500045776367,
+            "ma20_prior": 82.84000091552734,
+            "cluster_pct": 3.93
+          }
+        },
+        "A3": {
+          "passed": true,
+          "raw": {
+            "ma20_distance_pct": 2.64,
+            "recent_3d_gain_pct": -1.83,
+            "upper_shadow_pct": 0.58,
+            "pressure": 88.80000305175781
+          }
+        },
+        "A4": {
+          "passed": false,
+          "raw": {
+            "reason": "none",
+            "dif": 1.4132449397052227,
+            "histogram": -0.011402867269828976
+          }
+        },
+        "A5": {
+          "passed": true,
+          "raw": {
+            "price": 85.69999694824219,
+            "max_price": 700.0,
+            "median_volume_20d": 2173846,
+            "min_volume": 500000,
+            "average_turnover_20d": 199688026,
+            "min_turnover": 50000000.0,
+            "sparse_day_ratio": 0.0,
+            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
+            "reasons": []
+          }
+        }
+      },
+      "B": {},
+      "C": {},
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
+      "breakout_level": null,
+      "breakout_timestamp": null,
+      "pullback_low": null,
+      "signal_timestamp": null,
+      "signal_price": null,
+      "recheck_timestamp": null,
+      "recheck_price": null,
+      "signal_age_seconds": null,
+      "raw_last_timestamp": null,
+      "daily_data_date": "2026-08-14 00:00:00",
+      "last_completed_60k_timestamp": null,
+      "last_completed_5k_timestamp": null,
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
+      "official_daytrade_eligibility": {
+        "source": "FinMind/TaiwanStockDayTrading",
+        "date": "2026-08-17",
+        "BuyAfterSale": "",
+        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
+      },
+      "stock_id": "2637",
+      "stock_name": "慧洋-KY",
+      "market_type": "twse",
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
     },
     {
       "strategy_version": "A5-N-research-default-v0.1-20260813",
@@ -2557,7 +1849,7 @@
           "raw": {
             "platform_low": 29.649999618530273,
             "platform_high": 33.599998474121094,
-            "distance_to_high_pct": 3.87,
+            "distance_to_high_pct": 3.72,
             "low_not_falling": true,
             "platform_range_pct": 13.32,
             "platform_days": 12
@@ -2566,20 +1858,20 @@
         "A2": {
           "passed": true,
           "raw": {
-            "close": 32.29999923706055,
-            "ma5": 32.64999923706055,
-            "ma10": 32.00499973297119,
-            "ma20": 31.63749990463257,
-            "ma20_prior": 31.409999942779542,
-            "cluster_pct": 3.13
+            "close": 32.349998474121094,
+            "ma5": 32.609999084472655,
+            "ma10": 32.20499954223633,
+            "ma20": 31.70499982833862,
+            "ma20_prior": 31.539999961853027,
+            "cluster_pct": 2.8
           }
         },
         "A3": {
-          "passed": true,
+          "passed": false,
           "raw": {
-            "ma20_distance_pct": 2.09,
-            "recent_3d_gain_pct": -2.42,
-            "upper_shadow_pct": 0.0,
+            "ma20_distance_pct": 2.03,
+            "recent_3d_gain_pct": -1.22,
+            "upper_shadow_pct": 4.79,
             "pressure": 33.599998474121094
           }
         },
@@ -2587,18 +1879,18 @@
           "passed": false,
           "raw": {
             "reason": "none",
-            "dif": 0.403930611373724,
-            "histogram": 0.09720615693364598
+            "dif": 0.36958139596992723,
+            "histogram": 0.05028555322387934
           }
         },
         "A5": {
           "passed": true,
           "raw": {
-            "price": 32.29999923706055,
+            "price": 32.349998474121094,
             "max_price": 700.0,
             "median_volume_20d": 4903228,
             "min_volume": 500000,
-            "average_turnover_20d": 183692476,
+            "average_turnover_20d": 190783343,
             "min_turnover": 50000000.0,
             "sparse_day_ratio": 0.0,
             "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
@@ -2608,7 +1900,7 @@
       },
       "B": {},
       "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
+      "symbol_evaluated_at": "2026-08-17 09:16:49.881910",
       "breakout_level": null,
       "breakout_timestamp": null,
       "pullback_low": null,
@@ -2618,139 +1910,21 @@
       "recheck_price": null,
       "signal_age_seconds": null,
       "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
+      "daily_data_date": "2026-08-14 00:00:00",
       "last_completed_60k_timestamp": null,
       "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
+      "expected_last_completed_timestamp": "2026-08-17 09:10:00",
       "official_daytrade_eligibility": {
         "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "BuyAfterSale": "",
         "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
       },
       "stock_id": "2605",
       "stock_name": "新興",
       "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
-    },
-    {
-      "strategy_version": "A5-N-research-default-v0.1-20260813",
-      "config": {
-        "parameter_status": "research_default",
-        "platform_lookback_days": 12,
-        "platform_exclude_recent_days": 2,
-        "platform_max_range_pct": 15.0,
-        "platform_min_days": 8,
-        "daily_near_high_pct": 4.0,
-        "daily_ma_cluster_pct": 5.0,
-        "daily_max_ma20_distance_pct": 8.0,
-        "daily_max_recent_3d_gain_pct": 12.0,
-        "daily_max_upper_shadow_pct": 4.0,
-        "liquidity_lookback_days": 20,
-        "a_pool_size": 40,
-        "a_pool_min_size": 30,
-        "a_pool_max_size": 50,
-        "max_ntfy_entries_per_scan": 4,
-        "hourly_structure_bars": 5,
-        "hourly_near_breakout_pct": 4.0,
-        "hourly_max_ema5_distance_pct": 3.0,
-        "breakout_buffer_pct": 0.0,
-        "pullback_touch_tolerance_pct": 0.8,
-        "pullback_break_tolerance_pct": 0.5,
-        "relative_volume_min": 1.2,
-        "pullback_max_volume_ratio": 0.8,
-        "max_signal_age_seconds": 900,
-        "max_breakout_extension_pct": 2.0,
-        "max_stop_risk_pct": 1.5,
-        "min_reward_risk": 2.0
-      },
-      "strategy_state": "DAILY_CANDIDATE",
-      "reject_reason": [
-        "B_DATA_INSUFFICIENT"
-      ],
-      "A": {
-        "A1": {
-          "passed": true,
-          "raw": {
-            "platform_low": 77.69999694824219,
-            "platform_high": 88.69999694824219,
-            "distance_to_high_pct": 3.95,
-            "low_not_falling": true,
-            "platform_range_pct": 14.16,
-            "platform_days": 12
-          }
-        },
-        "A2": {
-          "passed": true,
-          "raw": {
-            "close": 85.19999694824219,
-            "ma5": 87.3,
-            "ma10": 85.26000061035157,
-            "ma20": 83.18000068664551,
-            "ma20_prior": 82.66500091552734,
-            "cluster_pct": 4.84
-          }
-        },
-        "A3": {
-          "passed": true,
-          "raw": {
-            "ma20_distance_pct": 2.43,
-            "recent_3d_gain_pct": -3.29,
-            "upper_shadow_pct": 0.0,
-            "pressure": 88.69999694824219
-          }
-        },
-        "A4": {
-          "passed": false,
-          "raw": {
-            "reason": "none",
-            "dif": 1.6138908230026203,
-            "histogram": 0.18639229921011147
-          }
-        },
-        "A5": {
-          "passed": true,
-          "raw": {
-            "price": 85.19999694824219,
-            "max_price": 700.0,
-            "median_volume_20d": 2203056,
-            "min_volume": 500000,
-            "average_turnover_20d": 200795251,
-            "min_turnover": 50000000.0,
-            "sparse_day_ratio": 0.0,
-            "eligibility_source": "T-1 completed daily 20-day liquidity + existing daytrade eligibility",
-            "reasons": []
-          }
-        }
-      },
-      "B": {},
-      "C": {},
-      "symbol_evaluated_at": "2026-08-14 11:10:34.458584",
-      "breakout_level": null,
-      "breakout_timestamp": null,
-      "pullback_low": null,
-      "signal_timestamp": null,
-      "signal_price": null,
-      "recheck_timestamp": null,
-      "recheck_price": null,
-      "signal_age_seconds": null,
-      "raw_last_timestamp": null,
-      "daily_data_date": "2026-08-13 00:00:00",
-      "last_completed_60k_timestamp": null,
-      "last_completed_5k_timestamp": null,
-      "expected_last_completed_timestamp": "2026-08-14 11:05:00",
-      "official_daytrade_eligibility": {
-        "source": "FinMind/TaiwanStockDayTrading",
-        "date": "2026-08-14",
-        "BuyAfterSale": "",
-        "note": "BuyAfterSale=* still permits buy-then-sell; live bid/ask spread unavailable"
-      },
-      "stock_id": "2637",
-      "stock_name": "慧洋-KY",
-      "market_type": "twse",
-      "run_id": "16fbddd7-c135-4260-9201-2bded2a12e46",
-      "scan_started_at": "2026-08-14T11:10:34.458584+08:00"
+      "run_id": "832d65c8-f097-489c-8ffa-82993b078215",
+      "scan_started_at": "2026-08-17T09:16:49.881910+08:00"
     }
   ]
 }
