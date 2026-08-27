@@ -5072,6 +5072,27 @@ def mark_sent_today(subject: str, cfg: Config) -> None:
         fh.write("\n")
 
 
+def status_notice_marker_path(cfg: Config) -> Path:
+    safe_date = cfg_date(cfg).replace("/", "-")
+    return SENT_MARKER_DIR / f"status_notice_sent_{safe_date}.txt"
+
+
+def already_sent_status_notice(cfg: Config) -> bool:
+    return status_notice_marker_path(cfg).exists()
+
+
+def mark_status_notice_sent(subject: str, cfg: Config, error_text: str = "") -> None:
+    SENT_MARKER_DIR.mkdir(parents=True, exist_ok=True)
+    with open(status_notice_marker_path(cfg), "w", encoding="utf-8") as fh:
+        fh.write(subject)
+        fh.write("\n")
+        fh.write(dt.datetime.now().isoformat(timespec="seconds"))
+        fh.write("\n")
+        if error_text:
+            fh.write(error_text[:2000])
+            fh.write("\n")
+
+
 def send_email(subject: str, body: str, cfg: Config, attachments: list[Path] | None = None) -> None:
     if not (cfg.smtp_host and cfg.email_from and cfg.email_to):
         return
@@ -5399,6 +5420,7 @@ def main() -> int:
         return 0
 
     formal_report_ready = False
+    status_error_text = ""
     try:
         results = run(cfg)
         record_top3_journal(results.get("shortlist", []), cfg)
@@ -5420,6 +5442,7 @@ def main() -> int:
         formal_report_ready = True
     except Exception:
         error_text = traceback.format_exc()
+        status_error_text = error_text
         write_run_ledger(
             cfg=cfg,
             status="error",
@@ -5433,9 +5456,14 @@ def main() -> int:
         print(subject)
         print(body.split("\n\nHTML_TABLE:\n")[0])
     else:
+        if (not formal_report_ready) and status_error_text and already_sent_status_notice(cfg):
+            print(f"[skip] Status notice already sent for {cfg_date(cfg)}.")
+            return 0
         notification_sent = notify(subject, body, cfg)
         if notification_sent and formal_report_ready:
             mark_sent_today(subject, cfg)
+        elif notification_sent and status_error_text:
+            mark_status_notice_sent(subject, cfg, status_error_text)
     return 0
 
 

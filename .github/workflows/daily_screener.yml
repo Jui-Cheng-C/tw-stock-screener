@@ -43,7 +43,7 @@ permissions:
 concurrency:
   # A5-N early scans must not be queued behind or displaced by formal-report
   # insurance runs.  Each family remains serialized within its own group.
-  group: ${{ ((github.event_name == 'repository_dispatch') || (github.event_name == 'workflow_dispatch' && inputs.mode != 'auto' && inputs.mode != '') || (github.event_name == 'schedule' && (github.event.schedule == '40 0 * * 1-5' || github.event.schedule == '16 1 * * 1-5' || github.event.schedule == '26 1 * * 1-5' || github.event.schedule == '31 1 * * 1-5' || github.event.schedule == '30 9 * * 5'))) && format('a5n-{0}', github.ref) || format('daily-tw-stock-screener-{0}', github.ref) }}
+  group: ${{ (((github.event_name == 'repository_dispatch' && (github.event.client_payload.mode == 'intraday' || github.event.client_payload.mode == 'a5n' || github.event.client_payload.mode == 'scan-a5n-pool' || github.event.client_payload.mode == 'scan-a5n-fixed-pool' || github.event.client_payload.mode == 'build-a5n-pool' || github.event.client_payload.mode == 'build-a5n-fixed-pool')) || (github.event_name == 'workflow_dispatch' && inputs.mode != 'auto' && inputs.mode != '') || (github.event_name == 'schedule' && (github.event.schedule == '40 0 * * 1-5' || github.event.schedule == '16 1 * * 1-5' || github.event.schedule == '26 1 * * 1-5' || github.event.schedule == '31 1 * * 1-5' || github.event.schedule == '30 9 * * 5'))) && format('a5n-{0}', github.ref) || format('daily-tw-stock-screener-{0}', github.ref) }}
   cancel-in-progress: false
 
 jobs:
@@ -250,6 +250,13 @@ jobs:
           fi
           echo "Outside Taiwan delivery windows; skip delayed scheduled run."
           echo "run_mode=skip" >> "$GITHUB_OUTPUT"
+
+      - name: Refresh repository state before delivery
+        if: steps.delivery-window.outputs.run_mode == 'evening'
+        continue-on-error: true
+        run: |
+          git fetch origin main
+          git pull --ff-only origin main || echo "::warning::Could not fast-forward before delivery; sent marker may be stale."
 
       - name: Run intraday ntfy alert check
         # repository_dispatch is handled by the dedicated A5-N job above.
