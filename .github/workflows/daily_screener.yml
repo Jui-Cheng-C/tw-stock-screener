@@ -30,6 +30,7 @@ on:
         type: choice
         options:
           - auto
+          - force-evening
           - build-a5n-pool
           - scan-a5n-pool
           - build-a5n-fixed-pool
@@ -203,7 +204,7 @@ jobs:
           retention-days: 7
 
   run-screener:
-    if: (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || (github.event_name == 'workflow_dispatch' && (inputs.mode == 'auto' || inputs.mode == '')) || (github.event_name == 'schedule' && github.event.schedule != '40 0 * * 1-5' && github.event.schedule != '16 1 * * 1-5' && github.event.schedule != '26 1 * * 1-5' && github.event.schedule != '31 1 * * 1-5' && github.event.schedule != '30 9 * * 5')
+    if: (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || (github.event_name == 'workflow_dispatch' && (inputs.mode == 'auto' || inputs.mode == '' || inputs.mode == 'force-evening')) || (github.event_name == 'schedule' && github.event.schedule != '40 0 * * 1-5' && github.event.schedule != '16 1 * * 1-5' && github.event.schedule != '26 1 * * 1-5' && github.event.schedule != '31 1 * * 1-5' && github.event.schedule != '30 9 * * 5')
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -236,6 +237,11 @@ jobs:
       - name: Decide Taiwan run mode
         id: delivery-window
         run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.mode }}" = "force-evening" ]; then
+            echo "Manual force-evening mode selected; run formal email report regardless of current Taiwan time."
+            echo "run_mode=evening" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           hour="$(TZ=Asia/Taipei date +%H)"
           minute="$(TZ=Asia/Taipei date +%M)"
           echo "Taiwan hour: ${hour}"
@@ -266,7 +272,12 @@ jobs:
 
       - name: Run screener and send email report
         if: steps.delivery-window.outputs.run_mode == 'evening'
-        run: python tw_stock_screener.py --skip-if-sent
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.mode }}" = "force-evening" ]; then
+            python tw_stock_screener.py
+          else
+            python tw_stock_screener.py --skip-if-sent
+          fi
 
       - name: Persist screener journal
         if: always() && steps.delivery-window.outputs.run_mode == 'evening'
