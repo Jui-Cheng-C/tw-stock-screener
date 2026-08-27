@@ -2,3 +2,6 @@
 __pycache__/
 *.pyc
 last_report.txt
+ledgers/*.jsonl
+ledgers/*.jsonl.gz
+ledgers/*.tgz

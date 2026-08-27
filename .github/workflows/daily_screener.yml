@@ -69,14 +69,15 @@ jobs:
       - name: Build A5-N T-1 candidate pool
         run: python tw_stock_screener.py --a5n-build-pool
       - name: Persist A5-N candidate pool
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ledgers/a5n_daily_candidate_pool.json ledgers/a5n_premarket_ledger.jsonl ledgers/a5n_b_shadow_candidate_pool.json ledgers/a5n_b_shadow_premarket_ledger.jsonl
+          git add ledgers/a5n_daily_candidate_pool.json ledgers/a5n_b_shadow_candidate_pool.json
           if ! git diff --cached --quiet; then
             git commit -m "Build A5-N premarket candidate pool"
-            git pull --rebase
-            git push
+            git pull --rebase || echo "::warning::A5-N candidate pool pull/rebase failed; continuing so screening delivery is not blocked."
+            git push || echo "::warning::A5-N candidate pool push failed; continuing so screening delivery is not blocked."
           fi
 
   a5n-build-fixed-pool:
@@ -98,14 +99,15 @@ jobs:
       - name: Build next-week A5-N fixed pool
         run: python tw_stock_screener.py --a5n-build-fixed-pool
       - name: Persist A5-N fixed pool and audit
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ledgers/a5n_weekly_fixed_pool.json ledgers/a5n_weekly_fixed_pool_ledger.jsonl ledgers/a5n_weekly_fixed_pool_momentum_rank_shadow.json ledgers/a5n_weekly_fixed_pool_momentum_rank_shadow_ledger.jsonl
+          git add ledgers/a5n_weekly_fixed_pool.json ledgers/a5n_weekly_fixed_pool_momentum_rank_shadow.json
           if ! git diff --cached --quiet; then
             git commit -m "Build weekly A5-N fixed pool"
-            git pull --rebase
-            git push
+            git pull --rebase || echo "::warning::A5-N fixed pool pull/rebase failed; continuing so screening delivery is not blocked."
+            git push || echo "::warning::A5-N fixed pool push failed; continuing so screening delivery is not blocked."
           fi
 
   intraday-ntfy:
@@ -165,27 +167,40 @@ jobs:
             echo "Repository dispatch is outside A5-N 08:00-09:59 window; skip A5-N."
           fi
 
-      - name: Persist raw signal ledgers
+      - name: Persist A5-N state files
         if: always()
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ledgers/*.jsonl ledgers/a5n_daily_candidate_pool.json ledgers/a5n_b_shadow_candidate_pool.json ledgers/a5n_notification_slots.json 2>/dev/null || true
+          git add ledgers/a5n_daily_candidate_pool.json ledgers/a5n_b_shadow_candidate_pool.json ledgers/a5n_notification_slots.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
-            git commit -m "Update raw signal ledgers"
-            git pull --rebase
-            git push
+            git commit -m "Update A5-N state files"
+            git pull --rebase || echo "::warning::A5-N state pull/rebase failed; continuing because raw ledgers are not committed."
+            git push || echo "::warning::A5-N state push failed; continuing because raw ledgers are not committed."
           else
-            echo "No raw signal ledger changes to persist."
+            echo "No A5-N state changes to persist."
+          fi
+
+      - name: Compress raw signal ledger artifact
+        if: always()
+        continue-on-error: true
+        run: |
+          if compgen -G "ledgers/*.jsonl" > /dev/null; then
+            tar -czf "raw_signal_ledgers_${GITHUB_RUN_ID}.tgz" ledgers/*.jsonl
+          else
+            echo "No raw signal ledgers to compress."
           fi
 
       - name: Upload raw signal ledger artifact
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: latest-intraday-raw-signal-ledgers
-          path: ledgers/*.jsonl
+          path: raw_signal_ledgers_*.tgz
           if-no-files-found: ignore
+          retention-days: 7
 
   run-screener:
     if: (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || (github.event_name == 'workflow_dispatch' && (inputs.mode == 'auto' || inputs.mode == '')) || (github.event_name == 'schedule' && github.event.schedule != '40 0 * * 1-5' && github.event.schedule != '16 1 * * 1-5' && github.event.schedule != '26 1 * * 1-5' && github.event.schedule != '31 1 * * 1-5' && github.event.schedule != '30 9 * * 5')
@@ -248,20 +263,22 @@ jobs:
 
       - name: Persist screener journal
         if: always() && steps.delivery-window.outputs.run_mode == 'evening'
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add trade_journal.csv reports/*.html sent_reports/*.txt ledgers/*.jsonl 2>/dev/null || true
+          git add trade_journal.csv reports/*.html sent_reports/*.txt 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Update screener journal"
-            git pull --rebase
-            git push
+            git pull --rebase || echo "::warning::Screener journal pull/rebase failed; email delivery was already completed."
+            git push || echo "::warning::Screener journal push failed; email delivery was already completed."
           else
             echo "No screener journal changes to persist."
           fi
 
       - name: Upload latest report artifact
         if: always() && steps.delivery-window.outputs.run_mode == 'evening'
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: latest-screener-report
@@ -269,5 +286,5 @@ jobs:
             last_report.txt
             trade_journal.csv
             reports/*.html
-            ledgers/*.jsonl
           if-no-files-found: ignore
+          retention-days: 14
